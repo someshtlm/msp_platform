@@ -425,3 +425,42 @@ def validate_and_sanitize_policy_id(policy_id: str) -> str:
         return PolicyIdValidation.validate_policy_id(policy_id)
     except ValueError as e:
         raise ValueError(str(e))
+
+
+# =============================================================================
+# ACCOUNT ALLOCATION SCHEMAS
+# =============================================================================
+
+class AccountAllocationRequest(BaseModel):
+    """Request model for account allocation endpoint"""
+    companyName: str = Field(
+        ...,
+        min_length=2,
+        max_length=255,
+        description="Company name for the new account"
+    )
+    userId: str = Field(
+        ...,
+        description="User UUID (auth_user_id) from Supabase Auth"
+    )
+    userEmail: EmailStr = Field(
+        ...,
+        description="User email address"
+    )
+
+    @validator('companyName')
+    def validate_company_name(cls, v):
+        """Validate and clean company name"""
+        cleaned_name = v.strip()
+        if not cleaned_name:
+            raise ValueError('Company name cannot be empty')
+        return cleaned_name
+
+    @validator('userId')
+    def validate_user_id(cls, v):
+        """Validate user ID is a valid UUID"""
+        cleaned_id = v.strip()
+        guid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+        if not guid_pattern.match(cleaned_id):
+            raise ValueError(f'Invalid user ID format: {v}. Must be a valid UUID.')
+        return cleaned_id

@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Path, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from models import GraphApiResponse
+from schemas import AccountAllocationRequest
 
 # Add msp_platform root to Python path so we can import security_reporting_system as a package
 msp_platform_root = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -814,6 +815,188 @@ async def generate_security_report_json_endpoint(
 
     except Exception as e:
         logger.error(f"Unexpected error generating security report JSON for user_id={user_id}, org_id={org_id}: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/AccountAllocation", response_model=GraphApiResponse,
+             summary="Allocate New Account and Platform User")
+async def account_allocation_endpoint(request: AccountAllocationRequest):
+    """
+    Creates a new account and platform user in the system.
+
+    This endpoint calls the Supabase function `create_account_and_platform_user` to:
+    1. Create a new account with the provided company name
+    2. Create a platform user linked to the account and auth user
+    3. Return the newly created account_id and platform_user_id
+
+    Args:
+        request: AccountAllocationRequest containing:
+            - companyName: Company name for the new account (2-255 characters)
+            - userId: User UUID (auth_user_id) from Supabase Auth
+            - userEmail: User email address
+
+    Returns:
+        GraphApiResponse containing:
+            - success: Boolean indicating success
+            - account_id: Newly created account ID
+            - platform_user_id: Newly created platform user ID
+            - message: Success message
+
+    Error Handling:
+        - 400: Invalid request data (validation errors)
+        - 409: User already exists (duplicate userId)
+        - 500: Server error or database operation failed
+
+    Example Request:
+        POST /api/AccountAllocation
+        {
+            "companyName": "Acme Corp",
+            "userId": "670fef07-80ea-45be-b1ab-5c51461218d2",
+            "userEmail": "admin@acmecorp.com"
+        }
+
+    Example Response:
+        {
+            "status_code": 200,
+            "data": {
+                "success": true,
+                "account_id": 123,
+                "platform_user_id": 456,
+                "message": "Account allocated successfully"
+            },
+            "error": null
+        }
+    """
+    try:
+        logger.info(f"Account allocation request received for company: {request.companyName}, user: {request.userId}")
+
+        # Initialize Supabase client
+        from supabase import create_client
+
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            logger.error("Supabase credentials not configured")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error="Server configuration error: Supabase credentials missing"
+            )
+
+        supabase = create_client(supabase_url, supabase_key)
+
+        # Check if user already exists in platform_users table
+        try:
+            existing_user = supabase.table('platform_users')\
+                .select('id, account_id')\
+                .eq('auth_user_id', request.userId)\
+                .limit(1)\
+                .execute()
+
+            if existing_user.data and len(existing_user.data) > 0:
+                logger.warning(f"User already exists: {request.userId}")
+                return GraphApiResponse(
+                    status_code=409,
+                    data={
+                        "success": False,
+                        "message": "This user already exists",
+                        "existing_platform_user_id": existing_user.data[0]['id'],
+                        "existing_account_id": existing_user.data[0]['account_id']
+                    },
+                    error="User with this userId already exists in the system"
+                )
+        except Exception as e:
+            logger.error(f"Error checking existing user: {e}")
+            # Continue with creation attempt even if check fails
+
+        # Call the Supabase function to create account and platform user
+        try:
+            result = supabase.rpc(
+                'create_account_and_platform_user',
+                {
+                    'p_company_name': request.companyName,
+                    'p_user_id': request.userId,
+                    'p_user_email': request.userEmail
+                }
+            ).execute()
+
+            if not result.data:
+                logger.error("Supabase function returned empty result")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error="Failed to create account: Database function returned empty result"
+                )
+
+            # Extract the returned IDs
+            account_id = result.data.get('account_id')
+            platform_user_id = result.data.get('platform_user_id')
+
+            if not account_id or not platform_user_id:
+                logger.error(f"Invalid response from database function: {result.data}")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error="Failed to create account: Invalid response from database"
+                )
+
+            logger.info(f"Account created successfully - account_id: {account_id}, platform_user_id: {platform_user_id}")
+
+            return GraphApiResponse(
+                status_code=200,
+                data={
+                    "success": True,
+                    "account_id": account_id,
+                    "platform_user_id": platform_user_id,
+                    "message": "Account allocated successfully",
+                    "company_name": request.companyName,
+                    "user_email": request.userEmail
+                },
+                error=None
+            )
+
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"Error calling Supabase function: {error_message}")
+
+            # Check for specific database errors
+            if "duplicate key" in error_message.lower() or "already exists" in error_message.lower():
+                return GraphApiResponse(
+                    status_code=409,
+                    data=None,
+                    error="This user already exists in the system"
+                )
+            elif "foreign key" in error_message.lower():
+                return GraphApiResponse(
+                    status_code=400,
+                    data=None,
+                    error="Invalid user ID: User must exist in Supabase Auth"
+                )
+            else:
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error=f"Database operation failed: {error_message}"
+                )
+
+    except ValueError as ve:
+        # Validation errors from Pydantic
+        logger.error(f"Validation error: {ve}")
+        return GraphApiResponse(
+            status_code=400,
+            data=None,
+            error=f"Invalid request data: {str(ve)}"
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in account allocation: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return GraphApiResponse(
             status_code=500,
             data=None,
