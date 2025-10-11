@@ -63,9 +63,24 @@ class ConnectSecureProcessor:
                 # Extract ConnectSecure credentials from decrypted data
                 cs_creds = credentials.get('connectsecure', {})
 
+                # ADD VALIDATION HERE
+                base_url = cs_creds.get('connectsecure_base_url')
+                if not base_url:
+                    logger.warning("ConnectSecure base_url is missing or empty - ConnectSecure data will be skipped")
+                    self.client = None
+                    return
+
+                # ADD THIS: Ensure base_url is a string and strip any whitespace
+                base_url = str(base_url).strip()
+                if not base_url:
+                    logger.warning(
+                        "ConnectSecure base_url is empty after stripping - ConnectSecure data will be skipped")
+                    self.client = None
+                    return
+
                 cs_config = ConnectSecureConfig(
                     tenant_name=cs_creds.get('connectsecure_tenant_name'),
-                    base_url=cs_creds.get('connectsecure_base_url'),
+                    base_url=base_url,  # This is now validated
                     client_id=cs_creds.get('connectsecure_client_id'),
                     client_secret_b64=cs_creds.get('connectsecure_client_secret_b64')
                 )
@@ -77,6 +92,14 @@ class ConnectSecureProcessor:
             elif credential_id is not None:
                 logger.warning("Using DEPRECATED credential_id method. Please migrate to account_id.")
                 config = config_manager.load_credentials(credential_id)
+
+                # ADD THIS SAFETY CHECK
+                base_url = config.get('connectsecure_base_url', '').strip()
+                if not base_url:
+                    logger.warning(
+                        "ConnectSecure base_url is missing in legacy credentials - ConnectSecure data will be skipped")
+                    self.client = None
+                    return
 
                 cs_config = ConnectSecureConfig(
                     tenant_name=config['connectsecure_tenant_name'],
@@ -102,9 +125,9 @@ class ConnectSecureProcessor:
         if company_id is None:
             company_id = self.company_id
 
-        # Return empty data if no company_id provided
-        if not company_id:
-            logger.warning("No ConnectSecure company_id provided - returning empty data")
+        # Return empty data if no client (ConnectSecure not configured) or no company_id
+        if self.client is None or not company_id:
+            logger.warning("ConnectSecure not configured or no company_id provided - returning empty data")
             return {
                 'total_asset_count': {},
                 'assets': [],

@@ -57,10 +57,23 @@ class NinjaOneProcessor:
             # Extract NinjaOne credentials from decrypted data
             ninjaone_creds = credentials.get('ninjaone', {})
 
+            # ADD VALIDATION HERE
+            client_id = ninjaone_creds.get('ninjaone_client_id')
+            client_secret = ninjaone_creds.get('ninjaone_client_secret')
+            instance_url = ninjaone_creds.get('ninjaone_instance_url')
+
+            # Check if required fields are present
+            if not client_id or not client_secret or not instance_url:
+                logger.warning("NinjaOne credentials are incomplete - NinjaOne data will be skipped")
+                self.client = None
+                self.config = None
+                self.org_id = None
+                return
+
             self.config = {
-                'ninjaone_client_id': ninjaone_creds.get('ninjaone_client_id'),
-                'ninjaone_client_secret': ninjaone_creds.get('ninjaone_client_secret'),
-                'ninjaone_instance_url': ninjaone_creds.get('ninjaone_instance_url'),
+                'ninjaone_client_id': client_id,
+                'ninjaone_client_secret': client_secret,
+                'ninjaone_instance_url': instance_url,
                 'ninjaone_scopes': ninjaone_creds.get('ninjaone_scopes', 'monitoring management'),
             }
 
@@ -69,20 +82,41 @@ class NinjaOneProcessor:
         # OLD: Fallback to legacy credential_id method
         elif credential_id is not None:
             logger.warning("Using DEPRECATED credential_id method. Please migrate to account_id.")
-            self.config = config_manager.load_credentials(credential_id)
+            config = config_manager.load_credentials(credential_id)
+
+            # ADD VALIDATION HERE TOO
+            client_id = config.get('ninjaone_client_id')
+            client_secret = config.get('ninjaone_client_secret')
+            instance_url = config.get('ninjaone_instance_url')
+
+            if not client_id or not client_secret or not instance_url:
+                logger.warning("NinjaOne credentials are incomplete - NinjaOne data will be skipped")
+                self.client = None
+                self.config = None
+                self.org_id = None
+                return
+
+            self.config = config
 
         else:
             raise ValueError("Either account_id or credential_id must be provided")
 
-        # Use dynamic org_id if provided, otherwise fall back to config or default
-        self.org_id = ninjaone_org_id or self.config.get('target_org_id', '41')
+        # Only initialize client if credentials are complete
+        if self.config:
+            # Use dynamic org_id if provided, otherwise fall back to config or default
+            self.org_id = ninjaone_org_id or self.config.get('target_org_id', '41')
 
-        self.client = NinjaOneAPIClient(
-            client_id=self.config['ninjaone_client_id'],
-            client_secret=self.config['ninjaone_client_secret'],
-            instance_url=self.config['ninjaone_instance_url'],
-            org_id=self.org_id
-        )
+            self.client = NinjaOneAPIClient(
+                client_id=self.config['ninjaone_client_id'],
+                client_secret=self.config['ninjaone_client_secret'],
+                instance_url=self.config['ninjaone_instance_url'],
+                org_id=self.org_id
+            )
+        else:
+            # Create a dummy client that returns empty data instead of None
+            self.client = None
+            self.org_id = None
+            logger.warning("NinjaOne credentials incomplete - will return empty data")
 
     def fetch_all_data(self, use_time_filter: bool = True, month_name: str = None) -> Dict[str, Any]:
         """

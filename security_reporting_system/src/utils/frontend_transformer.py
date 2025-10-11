@@ -226,6 +226,9 @@ class FrontendTransformer:
             }
             # Get vulnerability data from new structure
             vuln_severity = cs_metrics.get("vulnerability_severity", {}) if cs_metrics else {}
+            # ADD SAFETY CHECK FOR NONE VALUES
+            if vuln_severity is None:
+                vuln_severity = {}
 
             # Autotask data
             autotask_metrics = data.get("autotask_metrics", {})
@@ -529,6 +532,9 @@ class FrontendTransformer:
 
             # Vulnerability severity - UPDATED to use new structure
             charts["vulnerability_severity"] = cs_metrics.get("vulnerability_severity", {})
+            # ADD SAFETY CHECK
+            if charts["vulnerability_severity"] is None:
+                charts["vulnerability_severity"] = {}
 
             # Agent type distribution - Keep full structure with breakdown and percentages
             agent_dist = cs_metrics.get("agent_type_distribution", {})
@@ -899,6 +905,9 @@ class FrontendTransformer:
 
             # Get vulnerability data from new structure
             vuln_severity = cs_metrics.get("vulnerability_severity", {})
+            # ADD SAFETY CHECK FOR NONE VALUES
+            if vuln_severity is None:
+                vuln_severity = {}
 
             metrics["security_metrics"].update({
                 "risk_score": cs_risk.get("average_score", 0),
@@ -962,6 +971,9 @@ class FrontendTransformer:
         # Vulnerability alert
         cs_metrics = data.get("connectsecure_metrics", {})
         vuln_severity = cs_metrics.get("vulnerability_severity", {})
+        # ADD SAFETY CHECK
+        if vuln_severity is None:
+            vuln_severity = {}
         total_vulns = vuln_severity.get("total", 0)
         critical_vulns = vuln_severity.get("critical", 0)
 
@@ -1021,6 +1033,11 @@ class FrontendTransformer:
         """Format device data for frontend with new field names and additional columns."""
         # Extract user and remove domain prefix
         user = device.get("user", "Unknown")
+        # ADD STRING CONVERSION
+        if user is None:
+            user = "Unknown"
+        else:
+            user = str(user)
         if "\\" in user:
             user = user.split("\\")[-1]  # Remove domain prefix like "SKG\"
 
@@ -1058,6 +1075,13 @@ class FrontendTransformer:
 
         # Get location with proper fallback for empty/None values
         location = device.get("location", "Unknown")
+        # ADD STRING CONVERSION AND STRIP
+        if location is None:
+            location = "Unknown"
+        else:
+            location = str(location).strip()
+        if not location or location == "":
+            location = "Unknown"
         if not location or location.strip() == "":
             location = "Unknown"
 

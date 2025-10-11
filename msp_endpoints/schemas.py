@@ -464,3 +464,94 @@ class AccountAllocationRequest(BaseModel):
         if not guid_pattern.match(cleaned_id):
             raise ValueError(f'Invalid user ID format: {v}. Must be a valid UUID.')
         return cleaned_id
+
+
+# =============================================================================
+# INTEGRATION CREDENTIALS SCHEMAS
+# =============================================================================
+
+class NinjaOneConfig(BaseModel):
+    """NinjaOne platform configuration - flexible validation"""
+    ninjaone_client_id: Optional[str] = None
+    ninjaone_client_secret: Optional[str] = None
+    ninjaone_instance_url: Optional[str] = None
+    ninjaone_scopes: Optional[str] = "monitoring management"
+
+    class Config:
+        extra = "allow"  # Allow additional fields
+
+
+class AutotaskConfig(BaseModel):
+    """Autotask platform configuration - flexible validation"""
+    autotask_username: Optional[str] = None
+    autotask_secret: Optional[str] = None
+    autotask_integration_code: Optional[str] = None
+    autotask_base_url: Optional[str] = "https://webservices.autotask.net/atservicesrest/v1.0/"
+
+    class Config:
+        extra = "allow"  # Allow additional fields
+
+
+class ConnectSecureConfig(BaseModel):
+    """ConnectSecure platform configuration - flexible validation"""
+    connectsecure_tenant_name: Optional[str] = None
+    connectsecure_base_url: Optional[str] = None
+    connectsecure_client_id: Optional[str] = None
+    connectsecure_client_secret_b64: Optional[str] = None
+
+    class Config:
+        extra = "allow"  # Allow additional fields
+
+
+class PlatformItem(BaseModel):
+    """Single platform with its configuration"""
+    platform: str = Field(..., description="Platform name: ninjaone, autotask, or connectsecure")
+    configuration: Union[NinjaOneConfig, AutotaskConfig, ConnectSecureConfig, Dict[str, Any]] = Field(
+        ...,
+        description="Platform-specific configuration"
+    )
+
+    @validator('platform')
+    def validate_platform(cls, v):
+        """Validate platform name"""
+        allowed_platforms = ['ninjaone', 'autotask', 'connectsecure']
+        platform_lower = v.lower().strip()
+        if platform_lower not in allowed_platforms:
+            raise ValueError(f'Platform must be one of: {", ".join(allowed_platforms)}')
+        return platform_lower
+
+
+class SaveIntegrationCredentialsRequest(BaseModel):
+    """Request model for saving integration credentials - flexible validation"""
+    companyId: int = Field(..., description="Account ID from database", gt=0)
+    companyName: str = Field(..., min_length=1, max_length=255, description="Company name")
+    userId: str = Field(..., description="User UUID (auth_user_id)")
+    platforms: List[PlatformItem] = Field(..., min_items=1, description="At least one platform required")
+
+    @validator('companyName')
+    def validate_company_name(cls, v):
+        """Validate and clean company name"""
+        cleaned_name = v.strip()
+        if not cleaned_name:
+            raise ValueError('Company name cannot be empty')
+        return cleaned_name
+
+    @validator('userId')
+    def validate_user_id(cls, v):
+        """Validate user ID is a valid UUID"""
+        cleaned_id = v.strip()
+        guid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+        if not guid_pattern.match(cleaned_id):
+            raise ValueError(f'Invalid user ID format: {v}. Must be a valid UUID.')
+        return cleaned_id
+
+    @validator('platforms')
+    def validate_unique_platforms(cls, v):
+        """Ensure no duplicate platforms"""
+        platform_names = [item.platform for item in v]
+        if len(platform_names) != len(set(platform_names)):
+            raise ValueError('Duplicate platforms not allowed')
+        return v
+
+    class Config:
+        extra = "forbid"  # Strict on root level but flexible on configurations

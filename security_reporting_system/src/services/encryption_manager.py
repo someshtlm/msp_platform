@@ -128,7 +128,7 @@ class EncryptionManager:
             encrypted_data: Dict containing {"encrypted": "blob"}
 
         Returns:
-            Decrypted credentials dict with autotask, ninjaone, connectsecure
+            Decrypted credentials dict with autotask, ninjaone, connectsecure in NESTED format
         """
         import json
         try:
@@ -146,7 +146,74 @@ class EncryptionManager:
 
             # Parse JSON back to dict
             credentials = json.loads(decrypted_json)
+
+            # TRANSFORM: Convert flat structure to nested structure if needed
+            credentials = self._transform_to_nested_structure(credentials)
+
             return credentials
         except Exception as e:
             logger.error(f"Failed to decrypt integration credentials: {e}")
             raise
+
+    def _transform_to_nested_structure(self, credentials: dict) -> dict:
+        """
+        Transform flat credential structure to nested platform structure.
+
+        Flat format:
+        {
+          "ninjaone_client_id": "...",
+          "ninjaone_client_secret": "...",
+          "autotask_username": "...",
+          ...
+        }
+
+        Nested format:
+        {
+          "ninjaone": {
+            "ninjaone_client_id": "...",
+            "ninjaone_client_secret": "...",
+            ...
+          },
+          "autotask": {
+            "autotask_username": "...",
+            ...
+          },
+          "connectsecure": {
+            ...
+          }
+        }
+        """
+        # Check if already in nested format (has platform keys)
+        if any(key in credentials for key in ['ninjaone', 'autotask', 'connectsecure']):
+            logger.debug("Credentials already in nested format")
+            return credentials
+
+        # Transform flat to nested
+        logger.debug("Transforming flat credentials to nested structure")
+
+        nested_credentials = {
+            'ninjaone': {},
+            'autotask': {},
+            'connectsecure': {}
+        }
+
+        # Map each credential to its platform
+        for key, value in credentials.items():
+            if key.startswith('ninjaone_'):
+                nested_credentials['ninjaone'][key] = value
+            elif key.startswith('autotask_'):
+                nested_credentials['autotask'][key] = value
+            elif key.startswith('connectsecure_'):
+                nested_credentials['connectsecure'][key] = value
+            else:
+                # Unknown credential, keep it at root level
+                logger.warning(f"Unknown credential key: {key}")
+
+        # Remove empty platform sections
+        result = {}
+        for platform, creds in nested_credentials.items():
+            if creds:  # Only include platforms that have credentials
+                result[platform] = creds
+
+        logger.info(f"Transformed credentials - platforms found: {list(result.keys())}")
+        return result

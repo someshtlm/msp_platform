@@ -5,11 +5,12 @@ import sys
 import os
 import io
 import base64
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from models import GraphApiResponse
-from schemas import AccountAllocationRequest
+from schemas import AccountAllocationRequest, SaveIntegrationCredentialsRequest
 
 # Add msp_platform root to Python path so we can import security_reporting_system as a package
 msp_platform_root = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -212,7 +213,7 @@ async def generate_security_report_json_endpoint(
         if user_id == "201d1004-4d25-4466-9d10-1936afd62a78":
             logger.info(f"Returning hardcoded demo data for user_id: {user_id}")
             demo_data = {
-                "organization": {
+                 "organization": {
                     "id": "41",
                     "name": "Crimson Retail",
                     "report_date": "2025-10-09T19:05:15.407535",
@@ -995,6 +996,476 @@ async def account_allocation_endpoint(request: AccountAllocationRequest):
 
     except Exception as e:
         logger.error(f"Unexpected error in account allocation: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/SaveIntegrationCredentials", response_model=GraphApiResponse,
+             summary="Save Integration Credentials and Sync Organizations")
+async def save_integration_credentials_endpoint(request: SaveIntegrationCredentialsRequest):
+    """
+    Save encrypted integration credentials for NinjaOne, Autotask, and/or ConnectSecure platforms,
+    test the credentials, fetch organizations, perform fuzzy matching, and save organization mappings.
+
+    Workflow:
+    1. Validate request and extract platform credentials
+    2. Transform to encryption format and encrypt using EncryptionManager
+    3. Save to integration_credentials table (or update if exists)
+    4. Test each platform's credentials by attempting API calls
+    5. Fetch organization lists from each platform
+    6. Perform fuzzy matching to map organizations across platforms
+    7. Save/update organization mappings to organizations table
+    8. Return detailed response with mappings and confidence scores
+
+    Args:
+        request: SaveIntegrationCredentialsRequest containing:
+            - companyId: Account ID (account_id in database)
+            - companyName: Company name
+            - userId: User UUID (auth_user_id)
+            - platforms: List of platform configurations (at least one)
+
+    Returns:
+        GraphApiResponse containing:
+            - success: Boolean indicating success
+            - message: Success/error message
+            - credential_id: ID of saved integration_credentials record
+            - platforms_tested: List of successfully tested platforms
+            - organizations_synced: Count of synced organizations
+            - organization_mappings: List of mapped organizations with confidence scores
+
+    Error Handling:
+        - 400: Invalid request data
+        - 403: Account access denied
+        - 500: Encryption, database, or API errors
+
+    Example Request:
+        POST /api/SaveIntegrationCredentials
+        {
+            "companyId": 41,
+            "companyName": "Crimson Retail",
+            "userId": "201d1004-4d25-4466-9d10-1936afd62a78",
+            "platforms": [
+                {
+                    "platform": "ninjaone",
+                    "configuration": {
+                        "ninjaone_client_id": "xxxx",
+                        "ninjaone_client_secret": "yyyy",
+                        "ninjaone_instance_url": "https://app.ninjarmm.com"
+                    }
+                },
+                {
+                    "platform": "autotask",
+                    "configuration": {
+                        "autotask_username": "user@example.com",
+                        "autotask_secret": "secret",
+                        "autotask_integration_code": "code"
+                    }
+                }
+            ]
+        }
+    """
+    try:
+        logger.info(f"SaveIntegrationCredentials request received for account_id: {request.companyId}, "
+                   f"platforms: {[p.platform for p in request.platforms]}")
+
+        # Initialize Supabase client
+        from supabase import create_client
+
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            logger.error("Supabase credentials not configured")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error="Server configuration error: Supabase credentials missing"
+            )
+
+        supabase = create_client(supabase_url, supabase_key)
+
+        # Step 1: Validate account exists (simple validation)
+        try:
+            account_response = supabase.table('accounts')\
+                .select('id')\
+                .eq('id', request.companyId)\
+                .limit(1)\
+                .execute()
+
+            if not account_response.data or len(account_response.data) == 0:
+                logger.error(f"Account {request.companyId} not found")
+                return GraphApiResponse(
+                    status_code=403,
+                    data=None,
+                    error=f"Account {request.companyId} not found"
+                )
+
+            logger.info(f"Validated account ID: {request.companyId}")
+
+        except Exception as e:
+            logger.error(f"Error validating account: {e}")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error=f"Failed to validate account: {str(e)}"
+            )
+
+        # Step 2: Transform payload to encryption format
+        # Combine all platform configurations into single credentials dict
+        combined_credentials = {}
+
+        for platform_item in request.platforms:
+            platform_name = platform_item.platform.lower()
+            config = platform_item.configuration
+
+            # Convert Pydantic model to dict if needed
+            if hasattr(config, 'dict'):
+                config_dict = config.dict(exclude_unset=True, exclude_none=True)
+            else:
+                config_dict = dict(config)
+
+            # Merge into combined credentials
+            combined_credentials.update(config_dict)
+
+        logger.info(f"Combined credentials keys: {list(combined_credentials.keys())}")
+
+        # Step 3: Encrypt credentials using EncryptionManager
+        try:
+            from security_reporting_system.src.services.encryption_manager import EncryptionManager
+
+            encryption_manager = EncryptionManager()
+            encrypted_blob = encryption_manager.encrypt_integration_credentials(combined_credentials)
+
+            logger.info("Credentials encrypted successfully")
+
+        except Exception as e:
+            logger.error(f"Encryption failed: {e}")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error=f"Failed to encrypt credentials: {str(e)}"
+            )
+
+        # Step 4: Save or update integration_credentials record
+        try:
+            # Check if credentials already exist for this account
+            existing_creds = supabase.table('integration_credentials')\
+                .select('id')\
+                .eq('account_id', request.companyId)\
+                .limit(1)\
+                .execute()
+
+            if existing_creds.data and len(existing_creds.data) > 0:
+                # Update existing
+                credential_id = existing_creds.data[0]['id']
+                update_result = supabase.table('integration_credentials')\
+                    .update({
+                        'credentials': encrypted_blob,
+                        'is_active': True,
+                        'updated_at': datetime.now().isoformat()
+                    })\
+                    .eq('id', credential_id)\
+                    .execute()
+
+                logger.info(f"Updated existing credentials (ID: {credential_id})")
+
+            else:
+                # Insert new
+                insert_result = supabase.table('integration_credentials')\
+                    .insert({
+                        'account_id': request.companyId,
+                        'credentials': encrypted_blob,
+                        'is_active': True,
+                        'created_at': datetime.now().isoformat(),
+                        'updated_at': datetime.now().isoformat()
+                    })\
+                    .execute()
+
+                credential_id = insert_result.data[0]['id']
+                logger.info(f"Inserted new credentials (ID: {credential_id})")
+
+        except Exception as e:
+            logger.error(f"Failed to save credentials: {e}")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error=f"Failed to save credentials to database: {str(e)}"
+            )
+
+        # Step 5: Test credentials and fetch organizations from each platform
+        import asyncio
+        import httpx
+
+        platforms_tested = []
+        platforms_failed = []
+        ninjaone_orgs = []
+        autotask_companies = []
+        connectsecure_companies = []
+
+        # Test each platform
+        for platform_item in request.platforms:
+            platform_name = platform_item.platform.lower()
+
+            try:
+                if platform_name == 'ninjaone':
+                    # Test NinjaOne credentials
+                    config = platform_item.configuration
+                    if hasattr(config, 'dict'):
+                        config_dict = config.dict(exclude_unset=True, exclude_none=True)
+                    else:
+                        config_dict = dict(config)
+
+                    token_url = f"{config_dict.get('ninjaone_instance_url')}/oauth/token"
+
+                    async with httpx.AsyncClient() as client:
+                        token_response = await client.post(token_url, data={
+                            'grant_type': 'client_credentials',
+                            'client_id': config_dict.get('ninjaone_client_id'),
+                            'client_secret': config_dict.get('ninjaone_client_secret'),
+                            'scope': config_dict.get('ninjaone_scopes', 'monitoring management')
+                        }, timeout=30.0)
+                        token_response.raise_for_status()
+                        token = token_response.json()['access_token']
+
+                        # Fetch organizations
+                        headers = {
+                            'Authorization': f'Bearer {token}',
+                            'Accept': 'application/json'
+                        }
+                        org_response = await client.get(
+                            f"{config_dict.get('ninjaone_instance_url')}/v2/organizations",
+                            headers=headers,
+                            timeout=30.0
+                        )
+                        org_response.raise_for_status()
+                        ninjaone_orgs = org_response.json()
+
+                        platforms_tested.append('ninjaone')
+                        logger.info(f"✓ NinjaOne tested successfully - {len(ninjaone_orgs)} organizations fetched")
+
+                elif platform_name == 'autotask':
+                    # Test Autotask credentials
+                    config = platform_item.configuration
+                    if hasattr(config, 'dict'):
+                        config_dict = config.dict(exclude_unset=True, exclude_none=True)
+                    else:
+                        config_dict = dict(config)
+
+                    # Get zone URL first
+                    zone_info_url = f"https://webservices.autotask.net/atservicesrest/v1.0/zoneInformation?user={config_dict.get('autotask_username')}"
+
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        zone_response = await client.get(zone_info_url)
+                        zone_response.raise_for_status()
+                        zone_data = zone_response.json()
+                        zone_url = zone_data.get('url').rstrip('/') + '/'
+
+                        # Fetch companies
+                        headers = {
+                            "UserName": config_dict.get('autotask_username'),
+                            "Secret": config_dict.get('autotask_secret'),
+                            "APIIntegrationcode": config_dict.get('autotask_integration_code'),
+                            "Content-Type": "application/json"
+                        }
+
+                        query_data = {
+                            "MaxRecords": 500,
+                            "filter": [{"field": "isActive", "op": "eq", "value": True}]
+                        }
+
+                        company_response = await client.post(
+                            f"{zone_url}v1.0/Companies/query",
+                            headers=headers,
+                            json=query_data,
+                            timeout=30.0
+                        )
+                        company_response.raise_for_status()
+                        company_data = company_response.json()
+                        autotask_companies = company_data.get('items', [])
+
+                        platforms_tested.append('autotask')
+                        logger.info(f"✓ Autotask tested successfully - {len(autotask_companies)} companies fetched")
+
+                elif platform_name == 'connectsecure':
+                    # Test ConnectSecure credentials
+                    config = platform_item.configuration
+                    if hasattr(config, 'dict'):
+                        config_dict = config.dict(exclude_unset=True, exclude_none=True)
+                    else:
+                        config_dict = dict(config)
+
+                    auth_url = f"{config_dict.get('connectsecure_base_url')}/w/authorize"
+
+                    headers = {
+                        "Client-Auth-Token": base64.b64encode(
+                            f"{config_dict.get('connectsecure_tenant_name')}+{config_dict.get('connectsecure_client_id')}:{config_dict.get('connectsecure_client_secret_b64')}".encode()
+                        ).decode(),
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    }
+
+                    async with httpx.AsyncClient() as client:
+                        auth_response = await client.post(auth_url, headers=headers, timeout=30.0)
+                        auth_response.raise_for_status()
+                        token_data = auth_response.json()
+
+                        access_token = token_data.get('access_token')
+                        user_id = str(token_data.get('user_id'))
+
+                        # Fetch companies
+                        company_headers = {
+                            'Authorization': f'Bearer {access_token}',
+                            'X-User-ID': user_id,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+
+                        company_response = await client.get(
+                            f"{config_dict.get('connectsecure_base_url')}/r/company/companies",
+                            headers=company_headers,
+                            timeout=30.0
+                        )
+                        company_response.raise_for_status()
+                        company_data = company_response.json()
+
+                        # Handle different response formats
+                        if isinstance(company_data, list):
+                            connectsecure_companies = company_data
+                        elif isinstance(company_data, dict) and 'data' in company_data:
+                            connectsecure_companies = company_data['data']
+                        elif isinstance(company_data, dict) and 'companies' in company_data:
+                            connectsecure_companies = company_data['companies']
+                        else:
+                            connectsecure_companies = []
+
+                        platforms_tested.append('connectsecure')
+                        logger.info(f"✓ ConnectSecure tested successfully - {len(connectsecure_companies)} companies fetched")
+
+            except Exception as e:
+                logger.warning(f"⚠ {platform_name.title()} test failed: {e}")
+                platforms_failed.append({
+                    'platform': platform_name,
+                    'error': str(e)
+                })
+
+        # Step 6: Perform fuzzy matching using OrganizationMatcher
+        try:
+            from security_reporting_system.src.utils.organization_matcher import OrganizationMatcher
+
+            matcher = OrganizationMatcher()
+            organization_mappings = matcher.match_organizations(
+                ninjaone_orgs,
+                autotask_companies,
+                connectsecure_companies
+            )
+
+            logger.info(f"Created {len(organization_mappings)} organization mappings")
+
+        except Exception as e:
+            logger.error(f"Organization matching failed: {e}")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error=f"Organization matching failed: {str(e)}"
+            )
+
+        # Step 7: Save organization mappings to organizations table
+        organizations_created = 0
+        organizations_updated = 0
+        organizations_failed = 0
+
+        try:
+            for mapping in organization_mappings:
+                try:
+                    # Check if organization already exists
+                    existing_org = supabase.table('organizations') \
+                        .select('id') \
+                        .eq('account_id', request.companyId) \
+                        .eq('ninjaone_org_id', mapping['ninjaone_org_id']) \
+                        .limit(1) \
+                        .execute()
+
+                    org_data = {
+                        'account_id': request.companyId,
+                        'organization_name': mapping['organization_name'],
+                        'ninjaone_org_id': mapping['ninjaone_org_id'],
+                        'autotask_id': mapping.get('autotask_id'),
+                        'connect_secure_id': mapping.get('connect_secure_id'),
+                        'status': 'Active',
+                        'updated_at': datetime.now().isoformat()
+                    }
+
+                    if existing_org.data and len(existing_org.data) > 0:
+                        # Update existing
+                        org_id = existing_org.data[0]['id']
+                        supabase.table('organizations')\
+                            .update(org_data)\
+                            .eq('id', org_id)\
+                            .execute()
+                        organizations_updated += 1
+                    else:
+                        # Insert new
+                        org_data['created_at'] = datetime.now().isoformat()
+                        supabase.table('organizations')\
+                            .insert(org_data)\
+                            .execute()
+                        organizations_created += 1
+
+                except Exception as e:
+                    logger.error(f"Failed to save organization {mapping.get('organization_name')}: {e}")
+                    organizations_failed += 1
+
+            logger.info(f"Organizations saved: {organizations_created} created, {organizations_updated} updated, {organizations_failed} failed")
+
+        except Exception as e:
+            logger.error(f"Failed to save organizations: {e}")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error=f"Failed to save organization mappings: {str(e)}"
+            )
+
+        # Step 8: Build response
+        response_data = {
+            "success": True,
+            "message": f"Integration credentials saved and {len(organization_mappings)} organizations synced",
+            "credential_id": credential_id,
+            "platforms_tested": platforms_tested,
+            "platforms_failed": platforms_failed if platforms_failed else None,
+            "organizations_summary": {
+                "total_synced": len(organization_mappings),
+                "created": organizations_created,
+                "updated": organizations_updated,
+                "failed": organizations_failed
+            },
+            "organization_mappings": [
+                {
+                    "organization_name": m['organization_name'],
+                    "ninjaone_org_id": m['ninjaone_org_id'],
+                    "autotask_id": m.get('autotask_id'),
+                    "connect_secure_id": m.get('connect_secure_id'),
+                    "match_confidence": m.get('match_confidence', 0.0),
+                    "match_method": m.get('match_method', 'unknown')
+                }
+                for m in organization_mappings[:50]  # Limit to first 50 for response size
+            ]
+        }
+
+        logger.info(f"✓ SaveIntegrationCredentials completed successfully for account {request.companyId}")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=response_data,
+            error=None
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in SaveIntegrationCredentials: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return GraphApiResponse(
