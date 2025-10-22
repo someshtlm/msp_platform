@@ -48,7 +48,7 @@ async def list_users(credentials: tuple = Depends(get_client_credentials)):
 
         async with httpx.AsyncClient() as client:
             # Get all users - UPDATED to include 'id' field
-            users_url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled"
+            users_url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled,userType"
             users_response = await client.get(users_url, headers=headers, timeout=30.0)
             users_response.raise_for_status()
             users = users_response.json().get("value", [])
@@ -83,7 +83,8 @@ async def list_users(credentials: tuple = Depends(get_client_credentials)):
                     "Department": user.get("department"),
                     "Role": user.get("jobTitle"),
                     "Status": "Active" if user.get("accountEnabled", True) else "Disabled",
-                    "MFA": mfa_status  # Now boolean True/False
+                    "MFA": mfa_status,  # Now boolean True/False
+                    "UserType": user.get("userType")
                 }
                 users_list.append(user_data)
 
@@ -143,7 +144,7 @@ async def get_all_users_details(credentials: tuple = Depends(get_client_credenti
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             # First, get all users list
-            users_url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled"
+            users_url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled,userType"
             users_response = await client.get(users_url, headers=headers)
             users_response.raise_for_status()
             users = users_response.json().get("value", [])

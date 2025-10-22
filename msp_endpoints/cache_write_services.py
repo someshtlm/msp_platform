@@ -431,6 +431,7 @@ async def write_users_to_cache(org_id: int) -> bool:
                 "role": user.get('Role'),
                 "status": user['Status'],
                 "mfa_enabled": user['MFA'],
+                "user_type": user.get('UserType'),
                 "last_synced": datetime.now().isoformat()
             }
 

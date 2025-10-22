@@ -397,7 +397,8 @@ async def get_cached_users_list(organization_id: int) -> Optional[Dict[str, Any]
                 "Department": user['department'],
                 "Role": user['role'],
                 "Status": user['status'],
-                "MFA": user['mfa_enabled']
+                "MFA": user['mfa_enabled'],
+                "UserType": user.get('user_type')
             })
 
         # Build frontend JSON exactly matching /api/ListUsers
