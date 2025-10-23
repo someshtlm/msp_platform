@@ -5,7 +5,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+import secrets
 import os
 
 # Configure logging
@@ -14,11 +17,34 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- Documentation Authentication Setup ---
+security = HTTPBasic()
+DOCS_USERNAME = os.getenv("DOCS_USERNAME", "admin")
+DOCS_PASSWORD = os.getenv("DOCS_PASSWORD", "changeme")
+
+def verify_docs_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    """
+    Verify documentation access credentials using Basic HTTP Authentication.
+    Uses secrets.compare_digest to prevent timing attacks.
+    """
+    correct_username = secrets.compare_digest(credentials.username, DOCS_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, DOCS_PASSWORD)
+
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials for documentation access",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
+
 # --- FastAPI Application Setup ---
 app = FastAPI(
     title="FastAPI Microsoft Graph Client",
     version="2.0.0",
-    description="A flexible FastAPI service to query various Microsoft Graph API v1.0 and beta endpoints."
+    description="A flexible FastAPI service to query various Microsoft Graph API v1.0 and beta endpoints.",
+    docs_url=None,  # Disable default docs - we'll add protected version below
+    redoc_url=None  # Disable default redoc - we'll add protected version below
 )
 
 # 👇 ADD THIS PART for CORS
@@ -34,6 +60,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Protected Documentation Endpoints ---
+@app.get("/docs", include_in_schema=False)
+async def get_documentation(authenticated: bool = Depends(verify_docs_credentials)):
+    """
+    Protected Swagger UI documentation.
+    Requires username and password authentication.
+    """
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="API Documentation")
+
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc(authenticated: bool = Depends(verify_docs_credentials)):
+    """
+    Protected ReDoc documentation.
+    Requires username and password authentication.
+    """
+    return get_redoc_html(openapi_url="/openapi.json", title="API Documentation - ReDoc")
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
