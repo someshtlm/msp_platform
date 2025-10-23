@@ -398,6 +398,54 @@ async def test_cache_read_all(clientId: int = Query(..., description="Client ID 
         )
 
 
+@router.get("/get-cached-user-ids/{org_id}", response_model=GraphApiResponse, summary="Get Cached User IDs")
+async def get_cached_user_ids(org_id: int = Path(..., description="Organization ID")):
+    """
+    Get list of user IDs from m365_users cache table for a specific organization.
+    This endpoint is used by the scheduler to fetch user_ids after writing users to cache.
+
+    Args:
+        org_id: Organization ID
+
+    Returns:
+        GraphApiResponse with list of user_ids or empty list if no users found
+    """
+    try:
+        from supabase_services import supabase
+
+        logger.info(f"Fetching cached user IDs for org_id: {org_id}")
+
+        # Query m365_users table for all user_ids for this organization
+        response = supabase.table('m365_users').select('user_id').eq('organization_id', org_id).execute()
+
+        if not response.data:
+            logger.warning(f"No cached users found for org_id: {org_id}")
+            return GraphApiResponse(
+                status_code=200,
+                data={"user_ids": [], "count": 0, "org_id": org_id},
+                error=None
+            )
+
+        # Extract user_ids from response
+        user_ids = [row['user_id'] for row in response.data]
+
+        logger.info(f"Found {len(user_ids)} cached user IDs for org_id: {org_id}")
+
+        return GraphApiResponse(
+            status_code=200,
+            data={"user_ids": user_ids, "count": len(user_ids), "org_id": org_id},
+            error=None
+        )
+
+    except Exception as e:
+        logger.error(f"ERROR fetching cached user IDs: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Failed to fetch cached user IDs: {str(e)}"
+        )
+
+
 # ============================================================================
 # PHASE 2: WRITE TEST ENDPOINTS
 # ============================================================================
