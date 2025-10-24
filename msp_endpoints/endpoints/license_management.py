@@ -11,36 +11,55 @@ from config import GRAPH_V1_URL, GRAPH_BETA_URL
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# SKU Name Mapping Dictionary
-SKU_NAME_MAPPING = {
-    "ENTERPRISEPREMIUM": "Microsoft 365 E5",
-    "ENTERPRISEPACK": "Microsoft 365 E3",
-    "ENTERPRISEPACK_B_PILOT": "Microsoft 365 E3",
-    "O365_BUSINESS_ESSENTIALS": "Microsoft 365 Business Basic",
-    "O365_BUSINESS_PREMIUM": "Microsoft 365 Business Premium",
-    "O365_BUSINESS_STANDARD": "Microsoft 365 Business Standard",
-    "EXCHANGESTANDARD": "Exchange Online (Plan 1)",
-    "EXCHANGEENTERPRISE": "Exchange Online (Plan 2)",
-    "POWER_BI_PRO": "Power BI Pro",
-    "PROJECTPREMIUM": "Project Plan 5",
-    "VISIO_PLAN2_USER": "Visio Plan 2",
-    "TEAMS_EXPLORATORY": "Microsoft Teams Exploratory",
-    "SPE_E3": "Microsoft 365 E3",
-    "SPE_E5": "Microsoft 365 E5",
-    "STANDARDPACK": "Office 365 E1",
-    "CRMSTANDARD": "Dynamics 365 Customer Service Professional"
-}
-
-
 # ------Helper Functions---------
 
+def lookup_friendly_name_from_db(service_plan_name: str) -> str:
+    """
+    Lookup friendly name from database license_sku_mappings table.
+
+    Args:
+        service_plan_name: SKU identifier (e.g., ENTERPRISEPREMIUM, O365_BUSINESS_PREMIUM)
+
+    Returns:
+        Product display name from database, or None if not found
+    """
+    try:
+        from supabase_services import supabase
+
+        response = supabase.table('license_sku_mappings')\
+            .select('product_display_name')\
+            .eq('service_plan_name', service_plan_name)\
+            .execute()
+
+        if response.data and len(response.data) > 0:
+            return response.data[0]['product_display_name']
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Database lookup failed for SKU '{service_plan_name}': {str(e)}")
+        return None
+
+
 def get_friendly_name(sku_part_number):
-    """Map SKU part number to friendly name"""
-    if sku_part_number in SKU_NAME_MAPPING:
-        return SKU_NAME_MAPPING[sku_part_number]
-    else:
-        # Format unknown SKUs nicely
-        return format_sku_name(sku_part_number)
+    """
+    Map SKU part number to friendly name using 2-tier fallback:
+    1. Database lookup (606 SKUs from Microsoft official CSV)
+    2. Format fallback (auto-format unknown SKUs)
+
+    Args:
+        sku_part_number: SKU identifier from Microsoft Graph API
+
+    Returns:
+        Human-readable friendly name for the license
+    """
+    # Tier 1: Database lookup (606 SKUs from Microsoft)
+    db_name = lookup_friendly_name_from_db(sku_part_number)
+    if db_name:
+        return db_name
+
+    # Tier 2: Format fallback (converts service_plan_name to friendly format)
+    return format_sku_name(sku_part_number)
 
 
 def format_sku_name(sku_part_number):
@@ -193,8 +212,12 @@ def process_license_summary(user_licenses, tenant_licenses):
     # 5. Calculate distribution (include all categories including "Others")
     license_distribution = map_to_distribution(all_license_details)
 
-    # 6. Filter out "Others" category from license details for UI display
-    license_details = [license for license in all_license_details if license["category"] != "Others"]
+    # 6. Sort licenses: Premium/Standard/Basic first, then "Others" at the bottom
+    def sort_by_category(license):
+        category_order = {"Premium": 1, "Standard": 2, "Basic": 3, "Others": 4}
+        return category_order.get(license["category"], 4)
+
+    license_details = sorted(all_license_details, key=sort_by_category)
 
     return {
         "totalUsers": total_users,
