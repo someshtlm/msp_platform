@@ -485,8 +485,22 @@ class AutotaskClient:
 
     async def get_slo_metrics(self, start_date: str, end_date: str, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get SLA metrics for tickets created in a date range for a specific company.
+
+        IMPORTANT: Only includes tickets where serviceLevelAgreementID is NOT null.
+        Tickets without an SLA contract assigned are excluded from metrics.
+
+        Uses HYBRID approach for Resolution SLA calculation:
+        - PRIORITY 1: Uses resolvedDateTime vs resolvedDueDateTime (when SLA contract exists)
+        - PRIORITY 2: Falls back to completedDate vs dueDateTime (when no SLA contract)
+
         Also returns first-response fields (firstResponseDateTime, firstResponseDueDateTime)
-        which allow calculation of First Response Met %."""
+        which allow calculation of First Response Met %.
+
+        Returns sla_calculation_method to indicate which fields were used:
+        - "SLA_CONTRACT": Used official SLA resolution fields
+        - "GENERAL_DUE_DATE": Fell back to general due date fields
+        - "NO_DUE_DATE": No due date information available
+        """
         try:
             start_dt = datetime.fromisoformat(start_date)
             end_dt = datetime.fromisoformat(end_date) + timedelta(days=1, seconds=-1)
@@ -505,14 +519,22 @@ class AutotaskClient:
             'id', 'ticketNumber', 'dueDateTime', 'completedDate', 'status',
             'firstResponseDateTime', 'firstResponseDueDateTime',
             'firstResponseAssignedResourceID', 'firstResponseInitiatingResourceID',
-            'serviceLevelAgreementHasBeenMet', 'resolvedDateTime', 'resolvedDueDateTime'
+            'serviceLevelAgreementHasBeenMet', 'serviceLevelAgreementID',
+            'resolvedDateTime', 'resolvedDueDateTime'
         ]
 
         tickets = await self.query("Tickets", filters=filters, fields=fields)
+
+        # Filter out tickets without SLA contract assigned
+        tickets_with_sla = [t for t in tickets if t.get('serviceLevelAgreementID') is not None]
+
+        logger.info(f"Total tickets fetched: {len(tickets)}, Tickets with SLA: {len(tickets_with_sla)}, Excluded (no SLA): {len(tickets) - len(tickets_with_sla)}")
+
         result = []
         now_utc = datetime.now(timezone.utc)
 
-        for ticket in tickets:
+        # Only process tickets that have an SLA contract assigned
+        for ticket in tickets_with_sla:
             # parse existing fields
             def _parse(dt_str):
                 if not dt_str:
@@ -520,21 +542,47 @@ class AutotaskClient:
                 # Autotask times are UTC ending with 'Z' — make them timezone-aware
                 return datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
 
+            # Parse SLA-specific resolution fields (CORRECT fields for Resolution SLA)
+            resolved_due_date = _parse(ticket.get('resolvedDueDateTime'))
+            resolved_date = _parse(ticket.get('resolvedDateTime'))
+
+            # Parse general due date fields (FALLBACK when no SLA contract)
             due_date = _parse(ticket.get('dueDateTime'))
             completed_date = _parse(ticket.get('completedDate'))
+
+            # Parse first response fields
             first_response_date = _parse(ticket.get('firstResponseDateTime'))
             first_response_due = _parse(ticket.get('firstResponseDueDateTime'))
 
             # Manual SLA calculation since serviceLevelAgreementHasBeenMet returns null
             autotask_sla_flag = ticket.get('serviceLevelAgreementHasBeenMet')
 
-            # Calculate SLA manually based on due dates vs completion dates
+            # Calculate Resolution SLA using HYBRID approach
             sla_met = None
             days_overdue = None
+            sla_calculation_method = None
 
-            if due_date and completed_date:
-                # Ticket is completed - check if it was completed on time
+            # PRIORITY 1: Use SLA-specific resolution fields when available
+            if resolved_due_date and resolved_date:
+                # SLA contract exists - use official Resolution SLA fields
+                sla_met = resolved_date <= resolved_due_date
+                sla_calculation_method = "SLA_CONTRACT"
+                if resolved_date > resolved_due_date:
+                    days_overdue = (resolved_date - resolved_due_date).days
+            elif resolved_due_date and not resolved_date:
+                # Ticket has SLA but is still open
+                if now_utc > resolved_due_date:
+                    sla_met = False
+                    days_overdue = (now_utc - resolved_due_date).days
+                    sla_calculation_method = "SLA_CONTRACT_OPEN"
+                else:
+                    sla_met = None  # Pending
+                    sla_calculation_method = "SLA_CONTRACT_PENDING"
+            # PRIORITY 2: Fallback to general due date when SLA fields are null
+            elif due_date and completed_date:
+                # No SLA contract - fall back to general due date compliance
                 sla_met = completed_date <= due_date
+                sla_calculation_method = "GENERAL_DUE_DATE"
                 if completed_date > due_date:
                     days_overdue = (completed_date - due_date).days
             elif due_date and not completed_date:
@@ -542,12 +590,15 @@ class AutotaskClient:
                 if now_utc > due_date:
                     sla_met = False
                     days_overdue = (now_utc - due_date).days
+                    sla_calculation_method = "GENERAL_DUE_DATE_OPEN"
                 else:
                     # Still within SLA window
                     sla_met = None  # Pending
+                    sla_calculation_method = "GENERAL_DUE_DATE_PENDING"
             else:
                 # No due date set - cannot determine SLA compliance
                 sla_met = None
+                sla_calculation_method = "NO_DUE_DATE"
 
             # first-response SLA calculation
             if first_response_due:
@@ -576,9 +627,16 @@ class AutotaskClient:
                 "ticket_id": ticket['id'],
                 "ticket_number": ticket.get('ticketNumber', f"T{ticket['id']}"),
                 "sla_met": bool(sla_met) if sla_met is not None else None,
+                "sla_calculation_method": sla_calculation_method,
+                "service_level_agreement_id": ticket.get('serviceLevelAgreementID'),  # Always present (filtered for non-null)
+                # SLA Resolution fields (CORRECT for Resolution SLA)
+                "resolved_date": resolved_date.isoformat() if resolved_date else None,
+                "resolved_due_date": resolved_due_date.isoformat() if resolved_due_date else None,
+                # General due date fields (FALLBACK)
                 "due_date": due_date.isoformat() if due_date else None,
                 "completed_date": completed_date.isoformat() if completed_date else None,
                 "days_overdue": days_overdue,
+                # First Response fields
                 "first_response_date": first_response_date.isoformat() if first_response_date else None,
                 "first_response_due_date": first_response_due.isoformat() if first_response_due else None,
                 "first_response_met": first_response_met,

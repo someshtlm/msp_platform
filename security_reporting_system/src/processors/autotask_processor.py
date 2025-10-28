@@ -472,7 +472,8 @@ class AutotaskProcessor:
             print(f"DEBUG: First SLO record keys: {list(slo_list[0].keys())}")
 
         # Calculate SLA metrics using Autotask methodology
-        resolved_tickets = [t for t in slo_list if t.get('completed_date') is not None]
+        # Check both resolved_date (SLA contract) and completed_date (fallback) for resolved tickets
+        resolved_tickets = [t for t in slo_list if t.get('resolved_date') is not None or t.get('completed_date') is not None]
         resolution_violations = len([t for t in resolved_tickets if t.get('sla_met') is False])
 
         # First Response SLA violations
