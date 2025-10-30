@@ -1697,12 +1697,31 @@ def extract_risky_signin_policies(ca_policies: list) -> list:
 # Endpoint for Block Sign-in on Shared Mailboxes
 # @router.get("/ListSharedMailboxSignInStatus", response_model=GraphApiResponse,
 #             summary="Check Block Sign-in on Shared Mailboxes")
-# async def list_shared_mailbox_signin_status(client_id: str = Depends(get_client_id)):
+# async def list_shared_mailbox_signin_status(clientId: Optional[str] = Query(None), org_id: Optional[int] = Query(None)):
 #     """
 #     Checks shared mailboxes and their sign-in status using Graph API.
 #     Returns compliance status for shared mailbox sign-in blocking.
+#
 #     """
 #     try:
+#         # Handle both clientId (old) and org_id (new) parameters
+#         if not clientId and not org_id:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="Either clientId or org_id query parameter is required"
+#             )
+#
+#         if clientId:
+#             client_id = clientId.strip()
+#         else:
+#             creds = await get_organization_credentials(org_id)
+#             if not creds:
+#                 raise HTTPException(
+#                     status_code=404,
+#                     detail=f"No credentials found for org_id: {org_id}"
+#                 )
+#             client_id = creds['client_id']
+#
 #         token = await get_access_token(client_id)
 #         headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 #
@@ -1719,48 +1738,58 @@ def extract_risky_signin_policies(ca_policies: list) -> list:
 #             users_data = users_response.json()
 #
 #         users = users_data.get("value", [])
-#         shared_mailboxes = []
 #
-#         # Step 2 & 3: Process each user to identify shared mailboxes
-#         for user in users:
+#         # --- Helper function for concurrent fetch (like MFA function) ---
+#         async def fetch_mailbox_info(user):
+#             """Fetch mailbox settings for a single user to identify shared mailboxes"""
 #             user_id = user.get("id", "")
 #             upn = user.get("userPrincipalName", "")
 #             account_enabled = user.get("accountEnabled", False)
 #             assigned_licenses = user.get("assignedLicenses", [])
 #             display_name = user.get("displayName", "")
 #
-#             # Identify potential shared mailboxes
+#             # Only check users without licenses (potential shared mailboxes)
 #             has_no_licenses = len(assigned_licenses) == 0
 #
-#             # Get mailbox settings for users without licenses
-#             if has_no_licenses:
-#                 try:
-#                     mailbox_url = f"{GRAPH_BETA_URL}/users/{user_id}/mailboxSettings"
+#             if not has_no_licenses:
+#                 return None  # Skip users with licenses
 #
-#                     async with httpx.AsyncClient() as client:
-#                         mailbox_response = await client.get(mailbox_url, headers=headers, timeout=10.0)
+#             try:
+#                 mailbox_url = f"{GRAPH_BETA_URL}/users/{user_id}/mailboxSettings"
 #
-#                         # If mailbox settings exist, this is likely a mailbox user
-#                         if mailbox_response.status_code == 200:
-#                             mailbox_data = mailbox_response.json()
+#                 async with httpx.AsyncClient() as client:
+#                     mailbox_response = await client.get(mailbox_url, headers=headers, timeout=10.0)
 #
-#                             # This user has a mailbox and no licenses = likely shared mailbox
-#                             shared_mailbox_info = {
-#                                 "id": user_id,
-#                                 "userPrincipalName": upn,
-#                                 "displayName": display_name,
-#                                 "accountEnabled": account_enabled,
-#                                 "assignedLicenses": assigned_licenses,
-#                                 "mailboxSettings": mailbox_data,
-#                                 "signInStatus": "enabled" if account_enabled else "disabled"
-#                             }
+#                     # If mailbox settings exist, this is likely a mailbox user
+#                     if mailbox_response.status_code == 200:
+#                         mailbox_data = mailbox_response.json()
 #
-#                             shared_mailboxes.append(shared_mailbox_info)
+#                         # This user has a mailbox and no licenses = likely shared mailbox
+#                         return {
+#                             "id": user_id,
+#                             "userPrincipalName": upn,
+#                             "displayName": display_name,
+#                             "accountEnabled": account_enabled,
+#                             "assignedLicenses": assigned_licenses,
+#                             "mailboxSettings": mailbox_data,
+#                             "signInStatus": "enabled" if account_enabled else "disabled"
+#                         }
 #
-#                 except Exception as e:
-#                     # If mailbox settings call fails, skip this user
-#                     logger.warning(f"Failed to get mailbox settings for user {upn}: {str(e)}")
-#                     continue
+#             except Exception as e:
+#                 # If mailbox settings call fails, skip this user
+#                 logger.warning(f"Failed to get mailbox settings for user {upn}: {str(e)}")
+#
+#             return None
+#
+#         # Step 2: ✨ Run ALL mailbox checks concurrently (OPTIMIZED!)
+#         logger.info(f"Checking {len(users)} users for shared mailboxes concurrently...")
+#         mailbox_results = await asyncio.gather(
+#             *(fetch_mailbox_info(user) for user in users)
+#         )
+#
+#         # Step 3: Filter out None values (users that aren't shared mailboxes)
+#         shared_mailboxes = [mb for mb in mailbox_results if mb is not None]
+#         logger.info(f"Found {len(shared_mailboxes)} shared mailboxes")
 #
 #         # Determine compliance status
 #         compliance_info = determine_shared_mailbox_compliance_status(shared_mailboxes)

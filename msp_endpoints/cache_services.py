@@ -421,11 +421,13 @@ async def get_cached_users_list(organization_id: int) -> Optional[Dict[str, Any]
 async def get_cached_clients(u_id: str) -> Optional[Dict[str, Any]]:
     """
     Read clients/organizations from organizations table filtered by user's account.
+    Includes POCs (Points of Contact) for each organization from organization_pocs table.
 
     Flow:
         1. Get account_id from u_id using SQL function
         2. Query organizations WHERE account_id = X
-        3. Return organizations for that account only
+        3. Fetch POCs for all organizations
+        4. Return organizations with their POCs list
 
     Database Schema (organizations table):
         - id (serial, PK) - This is the org_id
@@ -439,11 +441,20 @@ async def get_cached_clients(u_id: str) -> Optional[Dict[str, Any]]:
         - created_at (timestamp)
         - updated_at (timestamp)
 
+    Database Schema (organization_pocs table):
+        - id (serial, PK)
+        - organization_id (int, FK references organizations.id)
+        - poc_name (varchar)
+        - poc_email (varchar)
+        - poc_role (varchar)
+        - created_at (timestamp)
+        - updated_at (timestamp)
+
     Args:
         u_id: User UUID from auth.users.id / platform_users.auth_user_id
 
     Returns:
-        JSON matching /api/GetClients response format
+        JSON matching /api/GetClients response format with pocs_list array for each organization
     """
     try:
         logger.info(f"📖 Reading clients/organizations for u_id: {u_id}")
@@ -475,6 +486,29 @@ async def get_cached_clients(u_id: str) -> Optional[Dict[str, Any]]:
             logger.warning(f"⏰ Organizations cache expired")
             return None
 
+        # Step 3: Fetch POCs for all organizations at once
+        org_ids = [org['id'] for org in response.data]
+        logger.info(f"📖 Fetching POCs for {len(org_ids)} organizations")
+
+        pocs_response = supabase.table('organization_pocs')\
+            .select('*')\
+            .in_('organization_id', org_ids)\
+            .execute()
+
+        # Group POCs by organization_id for easier lookup
+        pocs_by_org = {}
+        for poc in pocs_response.data:
+            org_id = poc['organization_id']
+            if org_id not in pocs_by_org:
+                pocs_by_org[org_id] = []
+            pocs_by_org[org_id].append({
+                "poc_name": poc['poc_name'],
+                "poc_email": poc['poc_email'],
+                "poc_role": poc['poc_role']
+            })
+
+        logger.info(f"✅ Found POCs for {len(pocs_by_org)} organizations")
+
         # Transform each organization to frontend format
         clients_array = []
         for org in response.data:
@@ -494,6 +528,9 @@ async def get_cached_clients(u_id: str) -> Optional[Dict[str, Any]]:
                 created_formatted = "N/A"
                 updated_formatted = "N/A"
 
+            # Get POCs for this organization (empty list if none found)
+            org_pocs = pocs_by_org.get(org['id'], [])
+
             clients_array.append({
                 "ninjaone_org_id": None,  # Temporary: null for now
                 "organization_name": org['organization_name'],
@@ -508,7 +545,8 @@ async def get_cached_clients(u_id: str) -> Optional[Dict[str, Any]]:
                 },
                 "status": org.get('status', 'Active'),
                 "industry": org.get('industry'),
-                "organization_size": org.get('organization_size')
+                "organization_size": org.get('organization_size'),
+                "pocs_list": org_pocs  # Add POCs list for this organization
             })
 
         # Build frontend JSON exactly matching /api/GetClients

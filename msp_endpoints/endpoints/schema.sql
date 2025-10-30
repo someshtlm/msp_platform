@@ -44,15 +44,21 @@ CREATE TABLE public.audit_log (
 CREATE TABLE public.integration_credentials (
   id integer NOT NULL DEFAULT nextval('integration_credentials_id_seq'::regclass),
   account_id integer,
-  integration_name character varying NOT NULL,
-  integration_display_name character varying,
-  credentials jsonb NOT NULL,
+  credentials jsonb,
   is_active boolean DEFAULT true,
   last_synced timestamp without time zone,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT integration_credentials_pkey PRIMARY KEY (id),
   CONSTRAINT integration_credentials_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id)
+);
+CREATE TABLE public.license_sku_mappings (
+  id integer NOT NULL DEFAULT nextval('license_sku_mappings_id_seq'::regclass),
+  service_plan_name character varying NOT NULL UNIQUE,
+  product_display_name character varying NOT NULL,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT license_sku_mappings_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.m365_compliance_snapshots (
   id integer NOT NULL DEFAULT nextval('m365_compliance_snapshots_id_seq'::regclass),
@@ -72,7 +78,7 @@ CREATE TABLE public.m365_credentials (
   organization_id integer UNIQUE,
   tenant_id character varying NOT NULL,
   client_id character varying NOT NULL UNIQUE,
-  client_secret text NOT NULL,
+  client_secret character varying NOT NULL,
   credential_status character varying DEFAULT 'Active'::character varying,
   last_token_refresh timestamp without time zone,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
@@ -249,20 +255,20 @@ CREATE TABLE public.m365_users (
   mfa_enabled boolean DEFAULT false,
   user_principal_name character varying,
   last_synced timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  user_type character varying DEFAULT 'Member'::character varying,
   CONSTRAINT m365_users_pkey PRIMARY KEY (id),
   CONSTRAINT m365_users_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
 );
-CREATE TABLE public.organization_integration_mappings (
-  id integer NOT NULL DEFAULT nextval('organization_integration_mappings_id_seq'::regclass),
-  organization_id integer,
-  integration_name character varying NOT NULL,
-  external_id character varying NOT NULL,
-  external_name character varying,
-  is_active boolean DEFAULT true,
-  last_synced timestamp without time zone,
+CREATE TABLE public.organization_pocs (
+  id integer NOT NULL DEFAULT nextval('organization_pocs_id_seq'::regclass),
+  organization_id integer NOT NULL,
+  poc_name character varying NOT NULL,
+  poc_email character varying NOT NULL,
+  poc_role character varying NOT NULL,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT organization_integration_mappings_pkey PRIMARY KEY (id),
-  CONSTRAINT organization_integration_mappings_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT organization_pocs_pkey PRIMARY KEY (id),
+  CONSTRAINT organization_pocs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
 );
 CREATE TABLE public.organizations (
   id integer NOT NULL DEFAULT nextval('organizations_id_seq'::regclass),

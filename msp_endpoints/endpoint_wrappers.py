@@ -68,14 +68,11 @@ async def list_shared_mailbox_signin_status_endpoint(credentials: tuple = Depend
     """External endpoint for Shared Mailbox Sign-In Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
-        response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
-        client_id = response.data[0]['client_id']
+        # Pass org_id to the main function
+        return await list_shared_mailbox_signin_status(clientId=None, org_id=identifier)
     else:
-        client_id = identifier
-    token = await get_access_token_by_identifier(identifier, identifier_type)
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    return await list_shared_mailbox_signin_status(headers, client_id)
+        # Pass clientId to the main function
+        return await list_shared_mailbox_signin_status(clientId=identifier, org_id=None)
 
 @router.get("/ListGuestUserAccessPermissions", response_model=GraphApiResponse, summary="Check Guest User Access Permissions")
 async def list_guest_user_access_permissions_endpoint(credentials: tuple = Depends(get_client_credentials)):
