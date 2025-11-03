@@ -348,8 +348,8 @@ class AutotaskEndpointTester:
 
         try:
             # Hardcoded date range and company ID
-            start_date = "2025-04-12T00:00:00"
-            end_date = "2025-10-12T23:59:59"
+            start_date = "2025-10-01T00:00:00"
+            end_date = "2025-10-31T23:59:59"
             company_id = 625
 
             filters = [

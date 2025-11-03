@@ -144,10 +144,10 @@ class AutotaskClient:
         if company_id is not None:
             created_filters.append({"field": "companyID", "op": "eq", "value": company_id})
 
-        # Get all tickets completed in the date range
+        # Get all tickets created in the date range that are now completed
         completed_filters = [
-            {"field": "completedDate", "op": "gte", "value": start_dt.isoformat()},
-            {"field": "completedDate", "op": "lte", "value": end_dt.isoformat()},
+            {"field": "createDate", "op": "gte", "value": start_dt.isoformat()},
+            {"field": "createDate", "op": "lte", "value": end_dt.isoformat()},
             {"field": "status", "op": "eq", "value": 5}  # Assuming 5 is completed status
         ]
         if company_id is not None:
@@ -155,7 +155,7 @@ class AutotaskClient:
 
         # Fetch detailed ticket data for daily breakdown
         created_fields = ['id', 'createDate']
-        completed_fields = ['id', 'completedDate']
+        completed_fields = ['id', 'createDate']  # Use createDate for completed tickets too
 
         created_tickets_task = self.query("Tickets", filters=created_filters, fields=created_fields, max_records=500)
         completed_tickets_task = self.query("Tickets", filters=completed_filters, fields=completed_fields, max_records=500)
@@ -190,20 +190,20 @@ class AutotaskClient:
         # Process completed tickets with better error handling
         processed_completed = 0
         for ticket in completed_tickets:
-            completed_date_str = ticket.get('completedDate')
-            if completed_date_str:
+            create_date_str = ticket.get('createDate')  # Use createDate for completed tickets
+            if create_date_str:
                 try:
                     # Handle different date formats
-                    if completed_date_str.endswith('Z'):
-                        completed_date = datetime.fromisoformat(completed_date_str.replace('Z', '+00:00'))
+                    if create_date_str.endswith('Z'):
+                        create_date = datetime.fromisoformat(create_date_str.replace('Z', '+00:00'))
                     else:
-                        completed_date = datetime.fromisoformat(completed_date_str)
+                        create_date = datetime.fromisoformat(create_date_str)
 
-                    day_key = completed_date.date().isoformat()
+                    day_key = create_date.date().isoformat()
                     daily_completed[day_key] += 1
                     processed_completed += 1
                 except Exception as e:
-                    logger.debug(f"Failed to parse completed date: {completed_date_str}, error: {e}")
+                    logger.debug(f"Failed to parse create date: {create_date_str}, error: {e}")
                     continue
 
         logger.info(f"Successfully processed {processed_created} created tickets and {processed_completed} completed tickets")
@@ -320,10 +320,10 @@ class AutotaskClient:
 
         logger.info(f"Available priorities: {priority_map}")
 
-        # Build filters for open tickets in the specified month
+        # Build filters for open tickets as of end of month (snapshot)
+        # Get all tickets created on or before end of month that are still open
         open_filters = [
             {"field": "status", "op": "in", "value": open_status_ids},
-            {"field": "createDate", "op": "gte", "value": start_date.isoformat()},
             {"field": "createDate", "op": "lte", "value": end_date.isoformat()}
         ]
 
