@@ -31,14 +31,12 @@ NINJA_ENDPOINTS = {
     #     "test": "/v2/queries/os-patch-installs?df=org=41&installedAfter=2025-08-01&installedBefore=2025-08-31"
     # "test": "/v2/queries/os-patch-installs?df=org=41&installedAfter=2025-08-01&installedBefore=2025-08-31"
     # "test": "/v2/devices-detailed?df=org=54",
-     "test": "/v2/locations"
+     "test": "/v2/queries/os-patch-installs?df=org=41&installedAfter=2025-10-01&installedBefore=2025-10-31"
     #    "test":     "/v2/queries/software-patch-installs?df=org=41&installedAfter=2025-08-01&installedBefore=2025-08-31"
     #  "test": "/v2/queries/software-patches?df=org=41&installedAfter=2025-08-01&installedBefore=2025-08-31"
     #          "test": "/v2/queries/software-patches?df=org=41"
 }
 
-NINJA_CLIENT_ID = "W5fh2GIOnM2csE2G1SwKT-O1AUU"
-NINJA_CLIENT_SECRET = "p9P2FPgM2_O8GPQ51i_RFc7s6GIbnJd3ksGmuu50DOH8jJbHBYWEIw"
 
 # Global variables for token management
 _ninja_token: Optional[str] = None
