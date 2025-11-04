@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 
 /.env
+/ninja_endpoint_tester.py
