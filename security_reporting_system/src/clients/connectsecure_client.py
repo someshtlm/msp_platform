@@ -512,17 +512,47 @@ class ConnectSecureClient:
             logger.error(f"Failed to fetch agents: {e}")
             return []
 
-    def get_company_stats(self, company_id: str) -> Dict[str, Any]:
-        """Get company statistics including vulnerability counts (no monthly filtering)."""
-        logger.info(f"Fetching company stats for company {company_id}...")
+    def get_company_stats(self, company_id: str, month_name: str = None) -> Dict[str, Any]:
+        """Get company statistics including vulnerability counts with optional monthly filtering."""
+        logger.info(f"Fetching company stats for company {company_id}, month: {month_name}...")
 
         if not self.token:
             self.get_token()
 
-        # No monthly filtering for company stats
-        import urllib.parse
-        condition = f"company_id = {company_id}"
-        encoded_condition = urllib.parse.quote(condition)
+        # Build condition with optional month filtering
+        if month_name:
+            # Calculate date range using MonthSelector
+            try:
+                from src.utils.month_selector import MonthSelector
+                month_selector = MonthSelector()
+                start_timestamp, end_timestamp = month_selector.get_month_timestamps(month_name)
+
+                from datetime import datetime
+                start_of_month = datetime.fromtimestamp(start_timestamp)
+                end_of_month = datetime.fromtimestamp(end_timestamp)
+
+                start_date = start_of_month.strftime('%Y-%m-%d')
+                end_date = end_of_month.strftime('%Y-%m-%d')
+
+                # URL encode the condition with date filtering
+                import urllib.parse
+                condition = f"created >= '{start_date}' AND created <= '{end_date}' AND company_id = {company_id}"
+                encoded_condition = urllib.parse.quote(condition)
+
+                logger.info(f"ConnectSecure company stats filtering for month: {month_name}")
+                logger.info(f"Date range: {start_date} to {end_date}")
+            except Exception as e:
+                logger.warning(f"Failed to calculate month timestamps for {month_name}: {e}")
+                # Fallback to no month filtering
+                import urllib.parse
+                condition = f"company_id = {company_id}"
+                encoded_condition = urllib.parse.quote(condition)
+        else:
+            # No monthly filtering
+            import urllib.parse
+            condition = f"company_id = {company_id}"
+            encoded_condition = urllib.parse.quote(condition)
+
         endpoint = f"/r/company/company_stats?condition={encoded_condition}"
 
         try:
@@ -534,6 +564,11 @@ class ConnectSecureClient:
                 company_stats = response_data['data'][0]  # Get first item from data array
                 print(f"🔍 DEBUG: Retrieved company stats data: {company_stats.get('company_id', 'unknown')}")
                 logger.info(f"✅ Retrieved company stats data")
+
+                # Log month filtering results
+                if month_name:
+                    logger.info(f"Month filtering for '{month_name}' returned company stats")
+
                 return company_stats
             else:
                 logger.warning("❌ No company stats data returned")

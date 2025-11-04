@@ -14,9 +14,11 @@ logger = logging.getLogger(__name__)
 
 class FrontendTransformer:
 
-    def _calculate_risk_level(self, score: float) -> str:
-        """Calculate risk level from numerical score for backward compatibility."""
-        if score >= 80:
+    def _calculate_risk_level(self, score: Optional[float]) -> str:
+        """Calculate risk level from numerical score, handling None values."""
+        if score is None:
+            return "Unknown"
+        elif score >= 80:
             return "Critical"
         elif score >= 60:
             return "High"
@@ -198,7 +200,7 @@ class FrontendTransformer:
             "completed_tickets": 0,
             "total_patches": 0,
             "patch_compliance_percentage": 0,
-            "security_risk_score": 0,
+            "security_risk_score": {"live_count": None, "monthly_count": None},
             "risk_level": "Unknown",
             "total_vulnerabilities": 0,
             "data_sources": []
@@ -216,19 +218,26 @@ class FrontendTransformer:
             cs_metrics = data.get("connectsecure_metrics", {})
             cs_summary = cs_metrics.get("summary", {}) if cs_metrics else {}
             cs_asset_inventory = cs_metrics.get("asset_inventory", {}) if cs_metrics else {}
-            # Updated to use new security_risk_score structure
+            # Updated to use NEW security_risk_score structure with live_count and monthly_count
             cs_risk_data = cs_metrics.get("security_risk_score", {}) if cs_metrics else {}
-            # Map new structure to old format for backward compatibility
-            cs_risk = {
-                "average_score": cs_risk_data.get("overall_score", 0),
-                "risk_level": self._calculate_risk_level(cs_risk_data.get("overall_score", 0)),
-                "total_assets": cs_risk_data.get("total_assets", 0)
-            }
-            # Get vulnerability data from new structure
+            # Extract live and monthly counts (can be None)
+            live_count = cs_risk_data.get("live_count")
+            monthly_count = cs_risk_data.get("monthly_count")
+
+            # Calculate risk level based on live_count (primary) or monthly_count (fallback)
+            score_for_risk_level = live_count if live_count is not None else monthly_count
+            risk_level = self._calculate_risk_level(score_for_risk_level) if score_for_risk_level is not None else "Unknown"
+
+            # Get vulnerability data from NEW structure
             vuln_severity = cs_metrics.get("vulnerability_severity", {}) if cs_metrics else {}
-            # ADD SAFETY CHECK FOR NONE VALUES
+            # Safety check for None values
             if vuln_severity is None:
                 vuln_severity = {}
+
+            # Calculate total vulnerabilities from live_count
+            live_vuln = vuln_severity.get("live_count", {})
+            total_vulnerabilities = (live_vuln.get("critical", 0) + live_vuln.get("high", 0) +
+                                   live_vuln.get("medium", 0) + live_vuln.get("low", 0))
 
             # Autotask data
             autotask_metrics = data.get("autotask_metrics", {})
@@ -259,9 +268,9 @@ class FrontendTransformer:
                 "completed_tickets": created_vs_completed.get("completed_count", 0),
                 "total_patches": real_total_patches,  # Real total: 594
                 "patch_compliance_percentage": round(patch_compliance.get("os_patch_compliance", 0), 1),
-                "security_risk_score": cs_risk.get("average_score", 0),
-                "risk_level": cs_risk.get("risk_level", "Unknown"),
-                "total_vulnerabilities": vuln_severity.get("total", 0),
+                "security_risk_score": {"live_count": live_count, "monthly_count": monthly_count},
+                "risk_level": risk_level,
+                "total_vulnerabilities": total_vulnerabilities,
                 "data_sources": data.get("execution_info", {}).get("data_sources", [])
             })
 
@@ -331,11 +340,23 @@ class FrontendTransformer:
                 "Linux": 0,
                 "Unknown": 0
             },
+            "security_risk_score": {
+                "live_count": None,
+                "monthly_count": None
+            },
             "vulnerability_severity": {
-                "critical": 0,
-                "high": 0,
-                "medium": 0,
-                "low": 0
+                "live_count": {
+                    "critical": 0,
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0
+                },
+                "monthly_count": {
+                    "critical": 0,
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0
+                }
             },
             "agent_type_distribution": {
                 "total_agents": 0,
@@ -530,11 +551,33 @@ class FrontendTransformer:
             # OS distribution
             charts["operating_system_distribution"] = asset_inventory.get("os_distribution", {})
 
-            # Vulnerability severity - UPDATED to use new structure
-            charts["vulnerability_severity"] = cs_metrics.get("vulnerability_severity", {})
-            # ADD SAFETY CHECK
-            if charts["vulnerability_severity"] is None:
-                charts["vulnerability_severity"] = {}
+            # Security risk score - UPDATED to use new live_count/monthly_count structure
+            cs_risk_data = cs_metrics.get("security_risk_score", {})
+            if cs_risk_data is None:
+                cs_risk_data = {}
+
+            # Extract live_count and monthly_count (can be None for empty data)
+            live_risk = cs_risk_data.get("live_count")
+            monthly_risk = cs_risk_data.get("monthly_count")
+
+            charts["security_risk_score"] = {
+                "live_count": live_risk,
+                "monthly_count": monthly_risk
+            }
+
+            # Vulnerability severity - UPDATED to use new live_count/monthly_count structure
+            vuln_severity = cs_metrics.get("vulnerability_severity", {})
+            if vuln_severity is None:
+                vuln_severity = {}
+
+            # Extract live_count and monthly_count with defaults
+            live_vuln = vuln_severity.get("live_count", {"critical": 0, "high": 0, "medium": 0, "low": 0})
+            monthly_vuln = vuln_severity.get("monthly_count", {"critical": 0, "high": 0, "medium": 0, "low": 0})
+
+            charts["vulnerability_severity"] = {
+                "live_count": live_vuln,
+                "monthly_count": monthly_vuln
+            }
 
             # Agent type distribution - Keep full structure with breakdown and percentages
             agent_dist = cs_metrics.get("agent_type_distribution", {})
@@ -835,7 +878,7 @@ class FrontendTransformer:
                 "pending": 0
             },
             "security_metrics": {
-                "risk_score": 0,
+                "security_risk_score": {"live_count": None, "monthly_count": None},
                 "risk_level": "Unknown",
                 "total_vulnerabilities": 0,
                 "critical_vulnerabilities": 0,
@@ -866,14 +909,14 @@ class FrontendTransformer:
             cs_metrics = data.get("connectsecure_metrics", {})
             cs_summary = cs_metrics.get("summary", {}) if cs_metrics else {}
             cs_asset_inventory = cs_metrics.get("asset_inventory", {}) if cs_metrics else {}
-            # Updated to use new security_risk_score structure
+            # Updated to use NEW security_risk_score structure with live_count and monthly_count
             cs_risk_data = cs_metrics.get("security_risk_score", {}) if cs_metrics else {}
-            # Map new structure to old format for backward compatibility
-            cs_risk = {
-                "average_score": cs_risk_data.get("overall_score", 0),
-                "risk_level": self._calculate_risk_level(cs_risk_data.get("overall_score", 0)),
-                "total_assets": cs_risk_data.get("total_assets", 0)
-            }
+            live_count = cs_risk_data.get("live_count")
+            monthly_count = cs_risk_data.get("monthly_count")
+
+            # Calculate risk level based on live_count (primary) or monthly_count (fallback)
+            score_for_risk_level = live_count if live_count is not None else monthly_count
+            risk_level = self._calculate_risk_level(score_for_risk_level) if score_for_risk_level is not None else "Unknown"
 
             infra_metrics = data.get("infrastructure_metrics", {})
 
@@ -903,20 +946,25 @@ class FrontendTransformer:
                 "pending": os_patch_details.get("PENDING", 0)
             })
 
-            # Get vulnerability data from new structure
+            # Get vulnerability data from NEW structure
             vuln_severity = cs_metrics.get("vulnerability_severity", {})
-            # ADD SAFETY CHECK FOR NONE VALUES
+            # Safety check for None values
             if vuln_severity is None:
                 vuln_severity = {}
 
+            # Extract live_count vulnerabilities
+            live_vuln = vuln_severity.get("live_count", {})
+            total_vulnerabilities = (live_vuln.get("critical", 0) + live_vuln.get("high", 0) +
+                                   live_vuln.get("medium", 0) + live_vuln.get("low", 0))
+
             metrics["security_metrics"].update({
-                "risk_score": cs_risk.get("average_score", 0),
-                "risk_level": cs_risk.get("risk_level", "Unknown"),
-                "total_vulnerabilities": vuln_severity.get("total", 0),
-                "critical_vulnerabilities": vuln_severity.get("critical", 0),
-                "high_vulnerabilities": vuln_severity.get("high", 0),
-                "medium_vulnerabilities": vuln_severity.get("medium", 0),
-                "low_vulnerabilities": vuln_severity.get("low", 0)
+                "security_risk_score": {"live_count": live_count, "monthly_count": monthly_count},
+                "risk_level": risk_level,
+                "total_vulnerabilities": total_vulnerabilities,
+                "critical_vulnerabilities": live_vuln.get("critical", 0),
+                "high_vulnerabilities": live_vuln.get("high", 0),
+                "medium_vulnerabilities": live_vuln.get("medium", 0),
+                "low_vulnerabilities": live_vuln.get("low", 0)
             })
 
             metrics["infrastructure_health"].update({

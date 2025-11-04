@@ -164,23 +164,43 @@ class ConnectSecureProcessor:
             logger.error(f"Failed to fetch original assets: {e}")
             data['assets'] = []
 
-        # 4. NEW: Get asset stats data for risk score calculation with month filtering
+        # 4. NEW: Get asset stats data for risk score calculation - BOTH monthly and live
         try:
-            logger.debug(f"Fetching asset stats for risk score calculation (company {company_id}, month: {month_name})...")
-            data['risk_score'] = self.client.get_risk_score(company_id, month_name)
-            logger.info(f"✅ Retrieved risk score data from {len(data['risk_score'])} assets")
+            # Monthly data (with month filter)
+            logger.debug(f"Fetching MONTHLY asset stats for risk score (company {company_id}, month: {month_name})...")
+            data['risk_score_monthly'] = self.client.get_risk_score(company_id, month_name)
+            logger.info(f"✅ Retrieved MONTHLY risk score data from {len(data['risk_score_monthly'])} assets")
         except Exception as e:
-            logger.error(f"Failed to fetch asset stats for risk score: {e}")
-            data['risk_score'] = []
+            logger.error(f"Failed to fetch monthly asset stats for risk score: {e}")
+            data['risk_score_monthly'] = []
 
-        # 5. NEW: Get company stats data (includes vulnerability counts, NO monthly filtering)
         try:
-            logger.debug(f"Fetching company stats for company {company_id}...")
-            data['company_stats'] = self.client.get_company_stats(company_id)
-            logger.info(f"✅ Retrieved company stats data")
+            # Live data (no month filter)
+            logger.debug(f"Fetching LIVE asset stats for risk score (company {company_id})...")
+            data['risk_score_live'] = self.client.get_risk_score(company_id, month_name=None)
+            logger.info(f"✅ Retrieved LIVE risk score data from {len(data['risk_score_live'])} assets")
         except Exception as e:
-            logger.error(f"Failed to fetch company stats: {e}")
-            data['company_stats'] = {}
+            logger.error(f"Failed to fetch live asset stats for risk score: {e}")
+            data['risk_score_live'] = []
+
+        # 5. NEW: Get company stats data (vulnerability counts) - BOTH monthly and live
+        try:
+            # Monthly data (with month filter)
+            logger.debug(f"Fetching MONTHLY company stats (company {company_id}, month: {month_name})...")
+            data['company_stats_monthly'] = self.client.get_company_stats(company_id, month_name)
+            logger.info(f"✅ Retrieved MONTHLY company stats data")
+        except Exception as e:
+            logger.error(f"Failed to fetch monthly company stats: {e}")
+            data['company_stats_monthly'] = {}
+
+        try:
+            # Live data (no month filter)
+            logger.debug(f"Fetching LIVE company stats (company {company_id})...")
+            data['company_stats_live'] = self.client.get_company_stats(company_id, month_name=None)
+            logger.info(f"✅ Retrieved LIVE company stats data")
+        except Exception as e:
+            logger.error(f"Failed to fetch live company stats: {e}")
+            data['company_stats_live'] = {}
 
         # 6. NEW: Get agents data (no monthly filtering, only active agents)
         try:
@@ -200,8 +220,10 @@ class ConnectSecureProcessor:
         logger.info(f"   → Total asset count: {data['total_asset_count'].get('total_assets', 'N/A')}")
         logger.info(f"   → Asset view data: {len(data['asset_view'])} assets")
         logger.info(f"   → Original assets: {len(data['assets'])} assets")
-        logger.info(f"   → Asset stats for risk scores: {len(data['risk_score'])} assets")
-        logger.info(f"   → Company stats data: {data['company_stats'].get('company_id', 'N/A')}")
+        logger.info(f"   → MONTHLY risk score assets: {len(data['risk_score_monthly'])} assets")
+        logger.info(f"   → LIVE risk score assets: {len(data['risk_score_live'])} assets")
+        logger.info(f"   → MONTHLY company stats: {data['company_stats_monthly'].get('company_id', 'N/A')}")
+        logger.info(f"   → LIVE company stats: {data['company_stats_live'].get('company_id', 'N/A')}")
         logger.info(f"   → Active agents: {len(data['agents'])} agents")
 
         return data
@@ -923,17 +945,21 @@ class ConnectSecureProcessor:
         vulnerabilities = raw_data.get('vulnerabilities', [])
         security_incidents = raw_data.get('security_incidents', [])
         compliance_status = raw_data.get('compliance_status', {})
-        risk_score_data = raw_data.get('risk_score', [])
         total_asset_count_data = raw_data.get('total_asset_count', {})
         agents_data = raw_data.get('agents', [])
 
-        # NEW: Get new endpoint data
-        company_stats_data = raw_data.get('company_stats', {})
+        # NEW: Get BOTH monthly and live data for risk score and company stats
+        risk_score_monthly = raw_data.get('risk_score_monthly', [])
+        risk_score_live = raw_data.get('risk_score_live', [])
+        company_stats_monthly = raw_data.get('company_stats_monthly', {})
+        company_stats_live = raw_data.get('company_stats_live', {})
 
         # DEBUG: Print what data we received
-        print(f"🔍 DEBUG: company_stats_data: {company_stats_data.get('company_id', 'N/A')}")
+        print(f"🔍 DEBUG: risk_score_monthly: {len(risk_score_monthly)} assets")
+        print(f"🔍 DEBUG: risk_score_live: {len(risk_score_live)} assets")
+        print(f"🔍 DEBUG: company_stats_monthly: {company_stats_monthly.get('company_id', 'N/A')}")
+        print(f"🔍 DEBUG: company_stats_live: {company_stats_live.get('company_id', 'N/A')}")
         print(f"🔍 DEBUG: agents_data: {len(agents_data)} agents")
-        print(f"🔍 DEBUG: risk_score_data from raw_data: {len(risk_score_data)} assets")
         print(f"🔍 DEBUG: asset_view_data: {len(asset_view_data)} assets")
 
         print(f"🔍 DEBUG: Processing {len(assets_to_use)} assets")
@@ -941,32 +967,38 @@ class ConnectSecureProcessor:
         # Process asset metrics
         asset_metrics = self._process_asset_data(assets_to_use)
 
-        # NEW: Process company stats data (includes vulnerability counts)
-        vulnerability_count_metrics = self._process_company_stats_data(company_stats_data)
-        print(f"🔍 DEBUG: Vulnerability count metrics from company_stats: {vulnerability_count_metrics}")
+        # NEW: Process company stats data - BOTH monthly and live
+        vulnerability_monthly = self._process_company_stats_data(company_stats_monthly)
+        vulnerability_live = self._process_company_stats_data(company_stats_live)
+        print(f"🔍 DEBUG: Vulnerability MONTHLY metrics: {vulnerability_monthly}")
+        print(f"🔍 DEBUG: Vulnerability LIVE metrics: {vulnerability_live}")
+
+        # Combine into new structure
+        vulnerability_count_metrics = self._combine_vulnerability_metrics(vulnerability_monthly, vulnerability_live)
+        print(f"🔍 DEBUG: Combined vulnerability metrics: {vulnerability_count_metrics}")
 
         # NEW: Process agents data (no monthly filtering)
         agents_metrics = self._process_agents_data(agents_data)
         print(f"🔍 DEBUG: Agents metrics: {agents_metrics}")
 
-        # NEW: Process security risk score data (replaces old risk assessment)
-        security_risk_score_metrics = self._process_security_risk_score_data(risk_score_data)
-        print(f"🔍 DEBUG: Security risk score metrics: {security_risk_score_metrics}")
+        # NEW: Process security risk score data - BOTH monthly and live
+        risk_score_monthly_metrics = self._process_security_risk_score_data(risk_score_monthly)
+        risk_score_live_metrics = self._process_security_risk_score_data(risk_score_live)
+        print(f"🔍 DEBUG: Risk score MONTHLY metrics: {risk_score_monthly_metrics}")
+        print(f"🔍 DEBUG: Risk score LIVE metrics: {risk_score_live_metrics}")
 
-        # FALLBACK: If no risk score data, create basic metrics showing assets exist
-        if (security_risk_score_metrics["security_risk_score"]["total_assets"] == 0 and
-            asset_metrics["total_assets"] > 0):
-            print(f"🔍 DEBUG: No risk score data, creating basic metrics for {asset_metrics['total_assets']} assets")
+        # Combine into new structure
+        security_risk_score_metrics = self._combine_risk_score_metrics(risk_score_monthly_metrics, risk_score_live_metrics)
+        print(f"🔍 DEBUG: Combined risk score metrics: {security_risk_score_metrics}")
+
+        # FALLBACK: If no risk score data, set to null (not 0)
+        risk_score_data = security_risk_score_metrics.get("security_risk_score", {})
+        if risk_score_data.get("live_count") is None and risk_score_data.get("monthly_count") is None:
+            print(f"🔍 DEBUG: No risk score data available, both live_count and monthly_count are null")
             security_risk_score_metrics = {
                 "security_risk_score": {
-                    "overall_score": 0.00,
-                    "total_assets": asset_metrics["total_assets"],
-                    "risk_distribution": {
-                        "low": {"count": 0, "percentage": 0, "score_range": "0-40"},
-                        "medium": {"count": 0, "percentage": 0, "score_range": "41-70"},
-                        "high": {"count": 0, "percentage": 0, "score_range": "71-90"},
-                        "critical": {"count": 0, "percentage": 0, "score_range": "91-100"}
-                    }
+                    "live_count": None,
+                    "monthly_count": None
                 }
             }
             print(f"🔍 DEBUG: Using fallback risk score metrics: {security_risk_score_metrics}")
@@ -994,9 +1026,9 @@ class ConnectSecureProcessor:
         incident_metrics = self._process_incident_data(security_incidents)
         compliance_metrics = self._process_compliance_data(compliance_status)
 
-        # Create summary metrics using REAL DATA from new endpoints
+        # Create summary metrics using REAL DATA from new endpoints (use live data for summary)
         summary_metrics = self._generate_summary_metrics_from_real_data(
-            company_stats_data, security_incidents, compliance_status,
+            company_stats_live, security_incidents, compliance_status,
             security_risk_score_metrics, asset_view_data
         )
 
@@ -1506,6 +1538,56 @@ class ConnectSecureProcessor:
             return float(str(value))
         except (ValueError, TypeError):
             return default
+    def _combine_vulnerability_metrics(self, monthly_metrics: Dict[str, Any], live_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Combine monthly and live vulnerability metrics into the new structure.
+        Returns vulnerability_severity with live_count and monthly_count sub-objects.
+        """
+        monthly_vuln = monthly_metrics.get("vulnerability_severity", {})
+        live_vuln = live_metrics.get("vulnerability_severity", {})
+
+        return {
+            "vulnerability_severity": {
+                "live_count": {
+                    "critical": live_vuln.get("critical", 0),
+                    "high": live_vuln.get("high", 0),
+                    "medium": live_vuln.get("medium", 0),
+                    "low": live_vuln.get("low", 0)
+                },
+                "monthly_count": {
+                    "critical": monthly_vuln.get("critical", 0),
+                    "high": monthly_vuln.get("high", 0),
+                    "medium": monthly_vuln.get("medium", 0),
+                    "low": monthly_vuln.get("low", 0)
+                }
+            }
+        }
+
+    def _combine_risk_score_metrics(self, monthly_metrics: Dict[str, Any], live_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Combine monthly and live risk score metrics into the new structure.
+        Returns security_risk_score with live_count and monthly_count values (null if no data).
+        """
+        monthly_risk = monthly_metrics.get("security_risk_score", {})
+        live_risk = live_metrics.get("security_risk_score", {})
+
+        # Get overall_score, return null if no assets (instead of 0)
+        monthly_score = monthly_risk.get("overall_score")
+        live_score = live_risk.get("overall_score")
+
+        # If total_assets is 0, set score to null instead of 0
+        if monthly_risk.get("total_assets", 0) == 0:
+            monthly_score = None
+        if live_risk.get("total_assets", 0) == 0:
+            live_score = None
+
+        return {
+            "security_risk_score": {
+                "live_count": live_score,
+                "monthly_count": monthly_score
+            }
+        }
+
     def _process_company_stats_data(self, company_stats: Dict[str, Any]) -> Dict[str, Any]:
         """
         Process company stats data to extract vulnerability counts from asset_problem_stats.

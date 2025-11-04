@@ -688,9 +688,8 @@ class AutotaskClient:
         return sorted(result, key=lambda x: x["ticket_count"], reverse=True)
 
     async def get_open_tickets_by_issue_subissue(self, year: int, month: int, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Get open tickets grouped by issue type and sub-issue type for a specific month and company."""
-        # Calculate monthly date range
-        start_date = datetime(year, month, 1)
+        """Get snapshot of all open tickets as of month-end, grouped by issue type and sub-issue type for a specific company."""
+        # Calculate end of month date (snapshot point-in-time)
         if month == 12:
             end_date = datetime(year + 1, 1, 1) - timedelta(seconds=1)
         else:
@@ -720,10 +719,10 @@ class AutotaskClient:
 
         logger.info(f"Using hardcoded open status IDs (excluding status 5 = Complete): {open_status_ids}")
 
-        # Build filters for open tickets in the specified month
+        # Build filters for open tickets as of end of month (snapshot)
+        # Get all tickets created on or before end of month that are still open
         filters = [
             {"field": "status", "op": "in", "value": open_status_ids},
-            {"field": "createDate", "op": "gte", "value": start_date.isoformat()},
             {"field": "createDate", "op": "lte", "value": end_date.isoformat()}
         ]
 
@@ -734,7 +733,7 @@ class AutotaskClient:
         fields = ['id', 'status', 'issueType', 'subIssueType']
         tickets = await self.query("Tickets", filters=filters, fields=fields)
 
-        logger.info(f"Found {len(tickets)} open tickets for {year}-{month:02d}")
+        logger.info(f"Found {len(tickets)} open tickets as of end of {year}-{month:02d}")
 
         # Group tickets by (issueType, subIssueType)
         from collections import defaultdict
