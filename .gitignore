@@ -5,3 +5,4 @@
 ./msp_endpoints/update_credentials.py
 ./msp_endpoints/test.py
 ./security_reporting_system/.idea
+./security_reporting_system/ninja_endpoint_tester.py
