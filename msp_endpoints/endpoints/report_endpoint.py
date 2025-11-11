@@ -232,7 +232,10 @@ async def generate_security_report_json_endpoint(
                     "completed_tickets": 109,
                     "total_patches": 687,
                     "patch_compliance_percentage": 73.8,
-                    "security_risk_score": 12.24,
+                     "security_risk_score": {
+                        "live_count": 55.39,
+                        "monthly_count": 2.17
+                      },
                     "risk_level": "Low",
                     "total_vulnerabilities": 580,
                     "data_sources": [
@@ -297,13 +300,24 @@ async def generate_security_report_json_endpoint(
                         "Windows": 1,
                         "Windows 11": 3
                     },
-                    "vulnerability_severity": {
-                        "critical": 19,
-                        "high": 361,
-                        "medium": 190,
-                        "low": 10,
-                        "total": 580
+                    "security_risk_score": {
+                        "live_count": 55.39,
+                        "monthly_count": 2.17
                     },
+                    "vulnerability_severity": {
+                                "live_count": {
+                                  "critical": 28,
+                                  "high": 425,
+                                  "medium": 277,
+                                  "low": 25
+                                },
+                                "monthly_count": {
+                                  "critical": 0,
+                                  "high": 0,
+                                  "medium": 0,
+                                  "low": 0
+                                }
+                              },
                     "agent_type_distribution": {
                         "total_agents": 82,
                         "breakdown": [
