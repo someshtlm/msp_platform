@@ -53,7 +53,7 @@ class FrontendTransformer:
             organization_id = execution_info.get("organization_id", "unknown")
             organization_name = execution_info.get("organization_name", "Unknown Organization")
 
-            logger.info(f"🔄 Transforming data for {organization_name} (ID: {organization_id})")
+            logger.info(f" Transforming data for {organization_name} (ID: {organization_id})")
 
             # Build frontend-optimized structure with individual error handling
             frontend_json = {}
@@ -64,99 +64,123 @@ class FrontendTransformer:
                 logger.warning(f"Failed to extract organization info: {e}")
                 frontend_json["organization"] = {"id": "unknown", "name": "Unknown Organization"}
 
+            # NEW STRUCTURE: Group charts and tables by platform
             try:
-                frontend_json["summary"] = self._extract_summary_metrics(full_data)
-            except Exception as e:
-                logger.warning(f"Failed to extract summary metrics: {e}")
-                frontend_json["summary"] = {"data_sources": []}
-
-            try:
-                frontend_json["charts"] = self._extract_chart_data(full_data)
-            except Exception as e:
-                logger.warning(f"Failed to extract chart data: {e}")
-                frontend_json["charts"] = {}
-
-            # In the transform_to_frontend_json method, update the table extraction section:
-
-            try:
+                # Extract all chart and table data
+                charts_data = self._extract_chart_data(full_data)
                 table_data = self._extract_table_data(full_data)
-                # Extract tickets_by_contact to root level, keep other tables grouped
-                tickets_by_contact_data = table_data.get("tickets_by_contact", [])
 
-                # Separate contacts summary from the contacts list
+                # Initialize platform objects
+                frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                frontend_json["Autotask"] = {"charts": {}}
+                frontend_json["ConnectSecure"] = {"charts": {}}
+
+                # === NinjaOne Charts ===
+                if "patch_management_enablement" in charts_data:
+                    frontend_json["NinjaOne"]["charts"]["patch_management_enablement"] = charts_data["patch_management_enablement"]
+                if "patch_status_distribution" in charts_data:
+                    frontend_json["NinjaOne"]["charts"]["patch_status_distribution"] = charts_data["patch_status_distribution"]
+
+                # Extract tickets_by_contact for Autotask
+                tickets_by_contact_data = table_data.get("tickets_by_contact", [])
                 contacts_summary = None
                 contacts_list = []
-
                 for item in tickets_by_contact_data:
                     if isinstance(item, dict) and "contacts_summary" in item:
                         contacts_summary = item["contacts_summary"]
                     else:
                         contacts_list.append(item)
 
-                frontend_json["tickets_by_contact"] = contacts_list
-                frontend_json["tickets_by_contact_summary"] = {
-                    "contacts_summary": contacts_summary if contacts_summary else {
-                        "contacts_count": 0,
-                        "total_tickets": 0,
-                        "top_contact": "Unknown"
-                    }
-                }
-
-                # NEW: Add patch_management and devices_with_failed_patches to root level
-                frontend_json["patch_management"] = table_data.get("patch_management", {
-                    "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0},
-                                   "failed_devices": []},
-                    "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0},
-                                            "failed_devices": []}
+                # Add patch_management and devices_with_failed_patches to NinjaOne charts
+                frontend_json["NinjaOne"]["charts"]["patch_management"] = table_data.get("patch_management", {
+                    "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []},
+                    "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []}
                 })
-
-                frontend_json["devices_with_failed_patches"] = table_data.get("devices_with_failed_patches", {
+                frontend_json["NinjaOne"]["charts"]["devices_with_failed_patches"] = table_data.get("devices_with_failed_patches", {
                     "count": 0, "devices": [], "message": "No devices with failed patches"
                 })
 
-                frontend_json["last_scan_info"] = table_data.get("last_scan_info", {
-                    "last_successful_scan": datetime.now().isoformat(), "scan_status": "completed"
-                })
+                # === NinjaOne Tables ===
+                frontend_json["NinjaOne"]["tables"]["device_inventory"] = table_data.get("device_inventory", [])
+                frontend_json["NinjaOne"]["tables"]["device_inventory_server"] = table_data.get("device_inventory_server", [])
 
-                # Keep remaining tables grouped
-                frontend_json["tables"] = {
-                    "device_inventory": table_data.get("device_inventory", []),
-                    "device_inventory_server": table_data.get("device_inventory_server", [])
+                # === Autotask Charts ===
+                if "daily_tickets_trend" in charts_data:
+                    frontend_json["Autotask"]["charts"]["daily_tickets_trend"] = charts_data["daily_tickets_trend"]
+                if "monthly_tickets_by_type" in charts_data:
+                    frontend_json["Autotask"]["charts"]["monthly_tickets_by_type"] = charts_data["monthly_tickets_by_type"]
+                if "open_tickets_by_issue_type" in charts_data:
+                    frontend_json["Autotask"]["charts"]["open_tickets_by_issue_type"] = charts_data["open_tickets_by_issue_type"]
+                if "open_ticket_priority_distribution" in charts_data:
+                    frontend_json["Autotask"]["charts"]["open_ticket_priority_distribution"] = charts_data["open_ticket_priority_distribution"]
+                if "sla_performance" in charts_data:
+                    frontend_json["Autotask"]["charts"]["sla_performance"] = charts_data["sla_performance"]
+
+                frontend_json["Autotask"]["charts"]["tickets_by_contact"] = {
+                    "tickets_by_contact_summary": {
+                        "contacts_summary": contacts_summary if contacts_summary else {
+                            "contacts_count": 0,
+                            "total_tickets": 0,
+                            "top_contact": "Unknown"
+                        }
+                    },
+                    "data": contacts_list
                 }
 
+                # === ConnectSecure Charts ===
+                if "asset_type_distribution" in charts_data:
+                    frontend_json["ConnectSecure"]["charts"]["asset_type_distribution"] = charts_data["asset_type_distribution"]
+                if "operating_system_distribution" in charts_data:
+                    frontend_json["ConnectSecure"]["charts"]["operating_system_distribution"] = charts_data["operating_system_distribution"]
+                if "security_risk_score" in charts_data:
+                    frontend_json["ConnectSecure"]["charts"]["security_risk_score"] = charts_data["security_risk_score"]
+                if "vulnerability_severity" in charts_data:
+                    frontend_json["ConnectSecure"]["charts"]["vulnerability_severity"] = charts_data["vulnerability_severity"]
+                if "agent_type_distribution" in charts_data:
+                    frontend_json["ConnectSecure"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
+
             except Exception as e:
-                logger.warning(f"Failed to extract table data: {e}")
-                frontend_json["tickets_by_contact"] = []
-                frontend_json["tickets_by_contact_summary"] = {
-                    "contacts_summary": {
-                        "contacts_count": 0,
-                        "total_tickets": 0,
-                        "top_contact": "Unknown"
+                logger.warning(f"Failed to extract chart/table data: {e}")
+                # Fallback structure
+                frontend_json["NinjaOne"] = {
+                    "charts": {
+                        "patch_management_enablement": {"enabled": 0, "disabled": 0},
+                        "patch_status_distribution": {"installed": 0, "approved": 0, "failed": 0, "pending": 0},
+                        "patch_management": {
+                            "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []},
+                            "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []}
+                        },
+                        "devices_with_failed_patches": {"count": 0, "devices": [], "message": "No devices with failed patches"}
+                    },
+                    "tables": {
+                        "device_inventory": [],
+                        "device_inventory_server": []
                     }
                 }
-                frontend_json["patch_management"] = {
-                    "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0},
-                                   "failed_devices": []},
-                    "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0},
-                                            "failed_devices": []}
+                frontend_json["Autotask"] = {
+                    "charts": {
+                        "daily_tickets_trend": {},
+                        "monthly_tickets_by_type": {},
+                        "open_tickets_by_issue_type": [],
+                        "open_ticket_priority_distribution": {},
+                        "sla_performance": {},
+                        "tickets_by_contact": {
+                            "tickets_by_contact_summary": {"contacts_summary": {"contacts_count": 0, "total_tickets": 0, "top_contact": "Unknown"}},
+                            "data": []
+                        }
+                    }
                 }
-                frontend_json["devices_with_failed_patches"] = {"count": 0, "devices": [],
-                                                                "message": "No devices with failed patches"}
-                frontend_json["last_scan_info"] = {"last_successful_scan": datetime.now().isoformat(),
-                                                   "scan_status": "completed"}
-                frontend_json["tables"] = {"device_inventory": [], "device_inventory_server": []}
+                frontend_json["ConnectSecure"] = {
+                    "charts": {
+                        "asset_type_distribution": {"live_count": {"discovered": 0, "other_asset": 0, "unknown": 0}, "monthly_count": {"discovered": 0, "other_asset": 0, "unknown": 0}},
+                        "operating_system_distribution": {"live_count": {"Others": 0}, "monthly_count": {"Others": 0}},
+                        "security_risk_score": {"live_count": None, "monthly_count": None},
+                        "vulnerability_severity": {"live_count": {"critical": 0, "high": 0, "medium": 0, "low": 0}, "monthly_count": {"critical": 0, "high": 0, "medium": 0, "low": 0}},
+                        "agent_type_distribution": {}
+                    }
+                }
 
-            try:
-                frontend_json["metrics"] = self._extract_detailed_metrics(full_data)
-            except Exception as e:
-                logger.warning(f"Failed to extract metrics: {e}")
-                frontend_json["metrics"] = {}
 
-            try:
-                frontend_json["alerts"] = self._generate_alerts(full_data)
-            except Exception as e:
-                logger.warning(f"Failed to generate alerts: {e}")
-                frontend_json["alerts"] = []
 
             try:
                 frontend_json["execution_info"] = self._extract_execution_info(full_data)
@@ -164,11 +188,11 @@ class FrontendTransformer:
                 logger.warning(f"Failed to extract execution info: {e}")
                 frontend_json["execution_info"] = {"generated_at": datetime.now().isoformat()}
 
-            logger.info(f"✅ Frontend JSON generated for {organization_name}")
+            logger.info(f" Frontend JSON generated for {organization_name}")
             return frontend_json
 
         except Exception as e:
-            logger.error(f"❌ Failed to transform data to frontend JSON: {e}")
+            logger.error(f"Failed to transform data to frontend JSON: {e}")
             import traceback
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return self._create_error_response(str(e))
@@ -321,24 +345,25 @@ class FrontendTransformer:
                 "failed": 0,
                 "pending": 0
             },
-            "device_os_distribution": {
-                "windows_workstations": 0,
-                "windows_servers": 0
-            },
-            "asset_status": {
-                "offline": 0,
-                "online": 0
-            },
             "asset_type_distribution": {
-                "discovered": 0,
-                "other_asset": 0
+                "live_count": {
+                    "discovered": 0,
+                    "other_asset": 0,
+                    "unknown": 0
+                },
+                "monthly_count": {
+                    "discovered": 0,
+                    "other_asset": 0,
+                    "unknown": 0
+                }
             },
             "operating_system_distribution": {
-                "Windows 11": 0,
-                "Windows Server": 0,
-                "Windows": 0,
-                "Linux": 0,
-                "Unknown": 0
+                "live_count": {
+                    "Others": 0
+                },
+                "monthly_count": {
+                    "Others": 0
+                }
             },
             "security_risk_score": {
                 "live_count": None,
@@ -522,34 +547,38 @@ class FrontendTransformer:
                 "pending": os_patch_details.get("PENDING", 0)
             }
 
-        # Device OS distribution from device spread
-        device_spread = data.get("device_spread", {})
-        if device_spread:
-            device_types = device_spread.get("device_types", {})
-            charts["device_os_distribution"] = {
-                "windows_workstations": device_types.get("Windows Workstations", 0),
-                "windows_servers": device_types.get("Windows Servers", 0)
-            }
+        # REMOVED: device_os_distribution from NinjaOne - no longer needed
 
         # ConnectSecure charts
         cs_metrics = data.get("connectsecure_metrics", {})
         if cs_metrics:
-            # Asset status - Use processor's fallback logic for consistency
-            asset_inventory = cs_metrics.get("asset_inventory", {})
-            # Check if processor's asset_status (with fallback logic) is available
-            processor_asset_status = cs_metrics.get("asset_status", {})
-            if processor_asset_status and (processor_asset_status.get("online", 0) > 0 or processor_asset_status.get("offline", 0) > 0):
-                # Use processor's asset_status which includes month filtering fallback logic
-                charts["asset_status"] = processor_asset_status
-            else:
-                # Fallback to asset_inventory devices_by_status
-                charts["asset_status"] = asset_inventory.get("devices_by_status", {})
+            # Asset type distribution - UPDATED to use new live_count/monthly_count structure
+            asset_type_dist = cs_metrics.get("asset_type_distribution", {})
+            if asset_type_dist is None:
+                asset_type_dist = {}
 
-            # Asset type distribution
-            charts["asset_type_distribution"] = asset_inventory.get("asset_types", {})
+            # Extract live_count and monthly_count (with defaults)
+            live_types = asset_type_dist.get("live_count", {"discovered": 0, "other_asset": 0, "unknown": 0})
+            monthly_types = asset_type_dist.get("monthly_count", {"discovered": 0, "other_asset": 0, "unknown": 0})
 
-            # OS distribution
-            charts["operating_system_distribution"] = asset_inventory.get("os_distribution", {})
+            charts["asset_type_distribution"] = {
+                "live_count": live_types,
+                "monthly_count": monthly_types
+            }
+
+            # OS distribution - UPDATED to use new live_count/monthly_count structure
+            os_dist = cs_metrics.get("operating_system_distribution", {})
+            if os_dist is None:
+                os_dist = {}
+
+            # Extract live_count and monthly_count (with defaults)
+            live_os = os_dist.get("live_count", {"Others": 0})
+            monthly_os = os_dist.get("monthly_count", {"Others": 0})
+
+            charts["operating_system_distribution"] = {
+                "live_count": live_os,
+                "monthly_count": monthly_os
+            }
 
             # Security risk score - UPDATED to use new live_count/monthly_count structure
             cs_risk_data = cs_metrics.get("security_risk_score", {})

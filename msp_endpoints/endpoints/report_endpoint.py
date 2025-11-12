@@ -213,438 +213,495 @@ async def generate_security_report_json_endpoint(
         if user_id == "201d1004-4d25-4466-9d10-1936afd62a78":
             logger.info(f"Returning hardcoded demo data for user_id: {user_id}")
             demo_data = {
-                 "organization": {
-                    "id": "41",
-                    "name": "Crimson Retail",
-                    "report_date": "2025-10-09T19:05:15.407535",
-                    "created_by": "Security Reporting System",
-                    "company": "Innovate Tech Partners",
-                    "reporting_period": "October 2025"
-                },
-                "summary": {
-                    "total_devices": 82,
-                    "online_devices": 42,
-                    "offline_devices": 40,
-                    "total_assets": 6,
-                    "online_assets": 1,
-                    "offline_assets": 5,
-                    "total_tickets": 128,
-                    "completed_tickets": 109,
-                    "total_patches": 687,
-                    "patch_compliance_percentage": 73.8,
-                     "security_risk_score": {
-                        "live_count": 55.39,
-                        "monthly_count": 2.17
-                      },
-                    "risk_level": "Low",
-                    "total_vulnerabilities": 580,
-                    "data_sources": [
-                        "NinjaOne",
-                        "Autotask",
-                        "ConnectSecure"
-                    ]
-                },
-                "charts": {
-                    "daily_tickets_trend": {
-                        "created": [1, 14, 3, 8, 5, 0, 1, 7, 7, 12, 2, 3, 0, 0, 9, 7, 4, 0, 5, 0, 0, 4, 6, 9, 2, 4, 1, 1, 7, 6],
-                        "completed": [0, 10, 7, 5, 4, 0, 0, 4, 8, 11, 10, 2, 0, 0, 6, 7, 4, 1, 5, 0, 0, 1, 4, 1, 1, 8, 1, 0, 3, 6],
-                        "days": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+                    "organization": {
+                        "id": "41",
+                        "name": "Crimson Retail",
+                        "report_date": "2025-10-09T19:05:15.407535",
+                        "created_by": "Security Reporting System",
+                        "company": "Innovate Tech Partners",
+                        "reporting_period": "October 2025"
                     },
-                    "monthly_tickets_by_type": {
-                        "workstation": 19,
-                        "email": 15,
-                        "user_access": 18,
-                        "application_software": 16,
-                        "server": 1,
-                        "network_internet": 5,
-                        "printer_scanner": 2,
-                        "shared_drive": 5,
-                        "cybersecurity": 3,
-                        "other": 14
+                    "NinjaOne": {
+                        "charts": {
+                            "patch_management_enablement": {
+                                "enabled": 81,
+                                "disabled": 1
+                            },
+                            "patch_status_distribution": {
+                                "installed": 651,
+                                "approved": 36,
+                                "failed": 2,
+                                "pending": 5
+                            },
+                            "agent_type_distribution": {
+                                "total_agents": 82,
+                                "breakdown": [
+                                    {
+                                        "agent_type": "LIGHTWEIGHT",
+                                        "count": 81,
+                                        "percentage": 98.8
+                                    },
+                                    {
+                                        "agent_type": "PROBE",
+                                        "count": 1,
+                                        "percentage": 1.2
+                                    }
+                                ]
+                            },
+                            "patch_management": {
+                                "os_patches": {
+                                    "summary": {
+                                        "total": 651,
+                                        "successful": 651,
+                                        "failed": 0,
+                                        "success_rate": 100.0
+                                    },
+                                    "failed_devices": []
+                                },
+                                "third_party_patches": {
+                                    "summary": {
+                                        "total": 360,
+                                        "successful": 360,
+                                        "failed": 0,
+                                        "success_rate": 100.0
+                                    },
+                                    "failed_devices": []
+                                }
+                            },
+                            "devices_with_failed_patches": {
+                                "count": 0,
+                                "devices": [],
+                                "message": "No devices with failed patches"
+                            }
+                        },
+                        "tables": {
+                            "device_inventory": [
+                                {
+                                    "device": "CR036",
+                                    "lastLoggedInUser": "emily",
+                                    "manufacturer": "Dell Inc.",
+                                    "model": "Latitude 5520",
+                                    "os": "Windows 11 Professional Edition",
+                                    "ram": "31.7GB",
+                                    "cpu": "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
+                                    "total_storage": "474.1GB",
+                                    "free_storage": "315.9GB",
+                                    "age": "2.2 years",
+                                    "age_category": "<4 years",
+                                    "location": "SOLA"
+                                },
+                                {
+                                    "device": "CR038",
+                                    "lastLoggedInUser": "john",
+                                    "manufacturer": "Dell Inc.",
+                                    "model": "Latitude 5320",
+                                    "os": "Windows 11 Professional Edition",
+                                    "ram": "15.8GB",
+                                    "cpu": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+                                    "total_storage": "235.8GB",
+                                    "free_storage": "35.7GB",
+                                    "age": "2.2 years",
+                                    "age_category": "<4 years",
+                                    "location": "Capetown"
+                                },
+                                {
+                                    "device": "CR106",
+                                    "lastLoggedInUser": "jane",
+                                    "manufacturer": "Alienware",
+                                    "model": "Alienware x17 R2",
+                                    "os": "Windows 11 Professional Edition",
+                                    "ram": "31.7GB",
+                                    "cpu": "12th Gen Intel(R) Core(TM) i9-12900HK",
+                                    "total_storage": "1905.7GB",
+                                    "free_storage": "967.1GB",
+                                    "age": "1.5 years",
+                                    "age_category": "<4 years",
+                                    "location": "Texas"
+                                },
+                                {
+                                    "device": "CR76976",
+                                    "lastLoggedInUser": "alen",
+                                    "manufacturer": "Dell Inc.",
+                                    "model": "Latitude 3550",
+                                    "os": "Windows 11 Professional Edition",
+                                    "ram": "31.7GB",
+                                    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+                                    "total_storage": "473.8GB",
+                                    "free_storage": "320.0GB",
+                                    "age": "1.3 years",
+                                    "age_category": "<4 years",
+                                    "location": "Capetown"
+                                }
+                            ],
+                            "device_inventory_server": [
+                                {
+                                    "device": "CR-7",
+                                    "lastLoggedInUser": "network",
+                                    "manufacturer": "Microsoft Corporation",
+                                    "model": "Virtual Machine",
+                                    "os": "Windows Server 2016 Standard Edition",
+                                    "ram": "11.6GB",
+                                    "cpu": "Intel(R) Xeon(R) Silver 4114 CPU @ 2.20GHz",
+                                    "total_storage": "4523.3GB",
+                                    "free_storage": "1087.7GB",
+                                    "age": "2.2 years",
+                                    "age_category": "<4 years",
+                                    "location": "Wall street"
+                                }
+                            ]
+                        }
                     },
-                    "open_ticket_priority_distribution": {
-                        "critical": 0,
-                        "high": 0,
-                        "medium": 14,
-                        "low": 0
+                    "Autotask": {
+                        "charts": {
+                            "daily_tickets_trend": {
+                                "created": [
+                                    1,
+                                    14,
+                                    3,
+                                    8,
+                                    5,
+                                    0,
+                                    1,
+                                    7,
+                                    7,
+                                    12,
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    9,
+                                    7,
+                                    4,
+                                    0,
+                                    5,
+                                    0,
+                                    0,
+                                    4,
+                                    6,
+                                    9,
+                                    2,
+                                    4,
+                                    1,
+                                    1,
+                                    7,
+                                    6
+                                ],
+                                "completed": [
+                                    0,
+                                    10,
+                                    7,
+                                    5,
+                                    4,
+                                    0,
+                                    0,
+                                    4,
+                                    8,
+                                    11,
+                                    10,
+                                    2,
+                                    0,
+                                    0,
+                                    6,
+                                    7,
+                                    4,
+                                    1,
+                                    5,
+                                    0,
+                                    0,
+                                    1,
+                                    4,
+                                    1,
+                                    1,
+                                    8,
+                                    1,
+                                    0,
+                                    3,
+                                    6
+                                ],
+                                "days": [
+                                    1,
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    8,
+                                    9,
+                                    10,
+                                    11,
+                                    12,
+                                    13,
+                                    14,
+                                    15,
+                                    16,
+                                    17,
+                                    18,
+                                    19,
+                                    20,
+                                    21,
+                                    22,
+                                    23,
+                                    24,
+                                    25,
+                                    26,
+                                    27,
+                                    28,
+                                    29,
+                                    30
+                                ]
+                            },
+                            "monthly_tickets_by_type": {
+                                "workstation": 19,
+                                "email": 15,
+                                "user_access": 18,
+                                "application_software": 16,
+                                "server": 1,
+                                "network_internet": 5,
+                                "printer_scanner": 2,
+                                "shared_drive": 5,
+                                "cybersecurity": 3,
+                                "other": 14
+                            },
+                            "open_ticket_priority_distribution": {
+                                "critical": 2,
+                                "high": 3,
+                                "medium": 8,
+                                "low": 1
+                            },
+                            "sla_performance": {
+                                "first_response_percentage": 98.1,
+                                "resolution_percentage": 71.9
+                            },
+                            "open_tickets_by_issue_type": [
+                                {
+                                    "issue_type": "Email",
+                                    "total_count": 3,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "SPAM",
+                                            "count": 1
+                                        },
+                                        {
+                                            "sub_issue_type": "Email Delivery Failure",
+                                            "count": 2
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "Network/Internet",
+                                    "total_count": 2,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "Network Performance",
+                                            "count": 2
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "Phone",
+                                    "total_count": 2,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "VoIP Not Working",
+                                            "count": 1
+                                        },
+                                        {
+                                            "sub_issue_type": "Call Quality Issues",
+                                            "count": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "Printer/Scanner/Copier",
+                                    "total_count": 2,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "Print Error",
+                                            "count": 1
+                                        },
+                                        {
+                                            "sub_issue_type": "Scanner Not Detected",
+                                            "count": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "Shared Drive",
+                                    "total_count": 2,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "Shared Drive Access/Permissions",
+                                            "count": 1
+                                        },
+                                        {
+                                            "sub_issue_type": "File Synchronization Issue",
+                                            "count": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "User Access and Management",
+                                    "total_count": 2,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "Employee Termination",
+                                            "count": 1
+                                        },
+                                        {
+                                            "sub_issue_type": "Password Reset Request",
+                                            "count": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "issue_type": "Workstation (Laptop/Desktop)",
+                                    "total_count": 1,
+                                    "sub_issues": [
+                                        {
+                                            "sub_issue_type": "Other Peripheral Device",
+                                            "count": 1
+                                        }
+                                    ]
+                                }
+                            ],
+                            "tickets_by_contact": {
+                                "tickets_by_contact_summary": {
+                                    "contacts_summary": {
+                                        "contacts_count": 22,
+                                        "total_tickets": 111,
+                                        "top_contact": "Emily Gupton"
+                                    }
+                                },
+                                "data": [
+                                    {
+                                        "name": "L. Gupton",
+                                        "tickets": 42
+                                    },
+                                    {
+                                        "name": "Automation Sheets",
+                                        "tickets": 26
+                                    },
+                                    {
+                                        "name": "Other",
+                                        "tickets": 10
+                                    },
+                                    {
+                                        "name": "TLIT unknown",
+                                        "tickets": 6
+                                    },
+                                    {
+                                        "name": "Mark Wood",
+                                        "tickets": 5
+                                    },
+                                    {
+                                        "name": "Sarah Williams",
+                                        "tickets": 5
+                                    },
+                                    {
+                                        "name": "Stinnette True",
+                                        "tickets": 5
+                                    },
+                                    {
+                                        "name": "Amy Vans",
+                                        "tickets": 2
+                                    },
+                                    {
+                                        "name": "Chris Morris",
+                                        "tickets": 2
+                                    },
+                                    {
+                                        "name": "Camille Gordon",
+                                        "tickets": 2
+                                    },
+                                    {
+                                        "name": "Scott Lee",
+                                        "tickets": 2
+                                    },
+                                    {
+                                        "name": "Pamela Frisina-Rosado",
+                                        "tickets": 2
+                                    },
+                                    {
+                                        "name": "JD Frank",
+                                        "tickets": 2
+                                    }
+                                ]
+                            }
+                        }
                     },
-                    "sla_performance": {
-                        "first_response_percentage": 98.1,
-                        "resolution_percentage": 71.9
-                    },
-                    "patch_management_enablement": {
-                        "enabled": 81,
-                        "disabled": 1
-                    },
-                    "patch_status_distribution": {
-                        "installed": 651,
-                        "approved": 36,
-                        "failed": 0,
-                        "pending": 0
-                    },
-                    "device_os_distribution": {
-                        "windows_workstations": 81,
-                        "windows_servers": 1
-                    },
-                    "asset_status": {
-                        "online": 31,
-                        "offline": 0
-                    },
-                    "asset_type_distribution": {
-                        "discovered": 6,
-                        "other_asset": 25,
-                        "unknown": 0
-                    },
-                    "operating_system_distribution": {
-                        "Unknown": 2,
-                        "Windows": 1,
-                        "Windows 11": 3
-                    },
-                    "security_risk_score": {
-                        "live_count": 55.39,
-                        "monthly_count": 2.17
-                    },
-                    "vulnerability_severity": {
+                    "ConnectSecure": {
+                        "charts": {
+                            "asset_type_distribution": {
                                 "live_count": {
-                                  "critical": 28,
-                                  "high": 425,
-                                  "medium": 277,
-                                  "low": 25
+                                    "discovered": 110,
+                                    "other_asset": 83,
+                                    "unknown": 4
                                 },
                                 "monthly_count": {
-                                  "critical": 0,
-                                  "high": 0,
-                                  "medium": 0,
-                                  "low": 0
+                                    "discovered": 6,
+                                    "other_asset": 25,
+                                    "unknown": 1
                                 }
-                              },
-                    "agent_type_distribution": {
-                        "total_agents": 82,
-                        "breakdown": [
-                            {
-                                "agent_type": "LIGHTWEIGHT",
-                                "count": 81,
-                                "percentage": 98.8
                             },
-                            {
-                                "agent_type": "PROBE",
-                                "count": 1,
-                                "percentage": 1.2
+                            "operating_system_distribution": {
+                                "live_count": {
+                                    "Windows": 80,
+                                    "Linux": 2,
+                                    "Others": 29
+                                },
+                                "monthly_count": {
+                                    "Others": 27,
+                                    "Windows": 13
+                                }
+                            },
+                            "security_risk_score": {
+                                "live_count": 55.39,
+                                "monthly_count": 2.17
+                            },
+                            "agent_type_distribution": {
+                                "total_agents": 82,
+                                "breakdown": [
+                                    {
+                                        "agent_type": "LIGHTWEIGHT",
+                                        "count": 81,
+                                        "percentage": 98.8
+                                    },
+                                    {
+                                        "agent_type": "PROBE",
+                                        "count": 1,
+                                        "percentage": 1.2
+                                    }
+                                ]
+                            },
+                            "vulnerability_severity": {
+                                "live_count": {
+                                    "critical": 28,
+                                    "high": 425,
+                                    "medium": 277,
+                                    "low": 25
+                                },
+                                "monthly_count": {
+                                    "critical": 0,
+                                    "high": 0,
+                                    "medium": 0,
+                                    "low": 0
+                                }
                             }
-                        ]
-                    },
-                    "open_tickets_by_issue_type": [
-                        {
-                            "issue_type": "Email",
-                            "total_count": 3,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "SPAM",
-                                    "count": 1
-                                },
-                                {
-                                    "sub_issue_type": "Email Delivery Failure",
-                                    "count": 2
-                                }
-                            ]
-                        },
-                        {
-                            "issue_type": "Network/Internet",
-                            "total_count": 2,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "Network Performance",
-                                    "count": 2
-                                }
-                            ]
-                        },
-                        {
-                            "issue_type": "Phone",
-                            "total_count": 2,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "VoIP Not Working",
-                                    "count": 1
-                                },
-                                {
-                                    "sub_issue_type": "Call Quality Issues",
-                                    "count": 1
-                                }
-                            ]
-                        },
-                        {
-                            "issue_type": "Printer/Scanner/Copier",
-                            "total_count": 2,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "Print Error",
-                                    "count": 1
-                                },
-                                {
-                                    "sub_issue_type": "Scanner Not Detected",
-                                    "count": 1
-                                }
-                            ]
-                        },
-                        {
-                            "issue_type": "Shared Drive",
-                            "total_count": 2,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "Shared Drive Access/Permissions",
-                                    "count": 1
-                                },
-                                {
-                                    "sub_issue_type": "File Synchronization Issue",
-                                    "count": 1
-                                }
-                            ]
-                        },
-                        {
-                            "issue_type": "User Access and Management",
-                            "total_count": 2,
-                            "sub_issues": [
-                                {
-                                    "sub_issue_type": "Employee Termination",
-                                    "count": 1
-                                },
-                                {
-                                    "sub_issue_type": "Password Reset Request",
-                                    "count": 1
-                                }
-                            ]
-    },
-    {
-        "issue_type": "Workstation (Laptop/Desktop)",
-        "total_count": 1,
-        "sub_issues": [
-            {
-                "sub_issue_type": "Other Peripheral Device",
-                "count": 1
-            }
-        ]
-    }
-]
-
-                },
-                "tickets_by_contact": [
-                    {
-                        "name": "John Smith",
-                        "tickets": 42
-                    },
-                    {
-                        "name": "Automation",
-                        "tickets": 24
-                    },
-                    {
-                        "name": "Other",
-                        "tickets": 24
-                    },
-                    {
-                        "name": "Care life",
-                        "tickets": 11
-                    },
-                    {
-                        "name": "Luka Wood",
-                        "tickets": 8
-                    },
-                    {
-                        "name": "Jonh doe",
-                        "tickets": 3
-                    },
-                    {
-                        "name": "Richard Elles",
-                        "tickets": 3
-                    },
-                    {
-                        "name": "Evans",
-                        "tickets": 2
-                    },
-                    {
-                        "name": "Joe Francis",
-                        "tickets": 2
-                    },
-                    {
-                        "name": "Cam Gordon",
-                        "tickets": 2
-                    },
-                    {
-                        "name": "Robert Liboon",
-                        "tickets": 2
-                    },
-                    {
-                        "name": "Chris Morris",
-                        "tickets": 2
-                    },
-                    {
-                        "name": "Arya Dane",
-                        "tickets": 2
-                    }
-                ],
-                "tickets_by_contact_summary": {
-                    "contacts_summary": {
-                        "contacts_count": 33,
-                        "total_tickets": 127,
-                        "top_contact": "John Smith"
-                    }
-                },
-                "patch_management": {
-                    "os_patches": {
-                        "summary": {
-                            "total": 651,
-                            "successful": 651,
-                            "failed": 0,
-                            "success_rate": 100.0
-                        },
-                        "failed_devices": []
-                    },
-                    "third_party_patches": {
-                        "summary": {
-                            "total": 360,
-                            "successful": 360,
-                            "failed": 0,
-                            "success_rate": 100.0
-                        },
-                        "failed_devices": []
-                    }
-                },
-                "devices_with_failed_patches": {
-                    "count": 0,
-                    "devices": [],
-                    "message": "No devices with failed patches"
-                },
-                "last_scan_info": {
-                    "last_successful_scan": "2025-10-09T00:32:40",
-                    "scan_status": "completed"
-                },
-                "tables": {
-                    "device_inventory": [
-                        {
-                            "device": "CR036",
-                            "lastLoggedInUser": "emily",
-                            "manufacturer": "Dell Inc.",
-                            "model": "Latitude 5520",
-                            "os": "Windows 11 Professional Edition",
-                            "ram": "31.7GB",
-                            "cpu": "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
-                            "total_storage": "474.1GB",
-                            "free_storage": "315.9GB",
-                            "age": "2.2 years",
-                            "age_category": "<4 years",
-                            "location": "SOLA"
-                        },
-                        {
-                            "device": "CR038",
-                            "lastLoggedInUser": "john",
-                            "manufacturer": "Dell Inc.",
-                            "model": "Latitude 5320",
-                            "os": "Windows 11 Professional Edition",
-                            "ram": "15.8GB",
-                            "cpu": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
-                            "total_storage": "235.8GB",
-                            "free_storage": "35.7GB",
-                            "age": "2.2 years",
-                            "age_category": "<4 years",
-                            "location": "Capetown"
-                        },
-                        {
-                            "device": "CR106",
-                            "lastLoggedInUser": "jane",
-                            "manufacturer": "Alienware",
-                            "model": "Alienware x17 R2",
-                            "os": "Windows 11 Professional Edition",
-                            "ram": "31.7GB",
-                            "cpu": "12th Gen Intel(R) Core(TM) i9-12900HK",
-                            "total_storage": "1905.7GB",
-                            "free_storage": "967.1GB",
-                            "age": "1.5 years",
-                            "age_category": "<4 years",
-                            "location": "Texas"
-                        },
-                        {
-                            "device": "CR76976",
-                            "lastLoggedInUser": "alen",
-                            "manufacturer": "Dell Inc.",
-                            "model": "Latitude 3550",
-                            "os": "Windows 11 Professional Edition",
-                            "ram": "31.7GB",
-                            "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
-                            "total_storage": "473.8GB",
-                            "free_storage": "320.0GB",
-                            "age": "1.3 years",
-                            "age_category": "<4 years",
-                            "location": "Capetown"
                         }
-                    ],
-                    "device_inventory_server": [
-                        {
-                            "device": "CR-7",
-                            "lastLoggedInUser": "network",
-                            "manufacturer": "Microsoft Corporation",
-                            "model": "Virtual Machine",
-                            "os": "Windows Server 2016 Standard Edition",
-                            "ram": "11.6GB",
-                            "cpu": "Intel(R) Xeon(R) Silver 4114 CPU @ 2.20GHz",
-                            "total_storage": "4523.3GB",
-                            "free_storage": "1087.7GB",
-                            "age": "2.2 years",
-                            "age_category": "<4 years",
-                            "location": "Wall street"
-                        }
-                    ]
-                },
-                "metrics": {
-                    "patch_compliance": {
-                        "success_rate": 73.8,
-                        "total_patches": 687,
-                        "installed": 651,
-                        "failed": 0,
-                        "pending": 0
                     },
-                    "security_metrics": {
-                        "risk_score": 12.24,
-                        "risk_level": "Low",
-                        "total_vulnerabilities": 580,
-                        "critical_vulnerabilities": 19,
-                        "high_vulnerabilities": 361,
-                        "medium_vulnerabilities": 186,
-                        "low_vulnerabilities": 14
-                    },
-                    "infrastructure_health": {
-                        "total_assets": 6,
-                        "online_percentage": 51.2,
-                        "offline_percentage": 48.8,
-                        "patch_enablement_percentage": 98.8
-                    },
-                    "support_metrics": {
-                        "total_tickets_month": 128,
-                        "completed_tickets": 109,
-                        "open_tickets": 24,
-                        "sla_first_response": 94.1,
-                        "sla_resolution": 76.9
+                    "execution_info": {
+                        "generated_at": "2025-10-09T19:05:15.407535",
+                        "data_sources_processed": [
+                            "NinjaOne",
+                            "Autotask",
+                            "ConnectSecure"
+                        ],
+                        "report_type": "Monthly Customer Report",
+                        "processing_time_seconds": 60.8,
+                        "next_update": "2025-11-08T19:05:51.260348"
                     }
-                },
-                "alerts": [
-                    {
-                        "type": "critical",
-                        "message": "580 total vulnerabilities detected",
-                        "critical_count": 19,
-                        "action_required": "Review vulnerability assessment"
-                    }
-                ],
-                "execution_info": {
-                    "generated_at": "2025-10-09T19:05:15.407535",
-                    "data_sources_processed": [
-                        "NinjaOne",
-                        "Autotask",
-                        "ConnectSecure"
-                    ],
-                    "report_type": "Monthly Customer Report",
-                    "processing_time_seconds": 60.8,
-                    "next_update": "2025-11-08T19:05:51.260348"
                 }
-            }
-
             return GraphApiResponse(
                 status_code=200,
                 data=demo_data,

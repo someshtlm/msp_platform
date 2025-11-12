@@ -409,19 +409,8 @@ class ConnectSecureProcessor:
         os_name = os_name.lower().strip()
 
         if 'windows' in os_name:
-            if '11' in os_name:
-                return 'Windows 11'
-            elif '10' in os_name:
-                return 'Windows 10'
-            elif 'server' in os_name:
-                if '2022' in os_name:
-                    return 'Windows Server 2022'
-                elif '2019' in os_name:
-                    return 'Windows Server 2019'
-                else:
-                    return 'Windows Server'
-            else:
-                return 'Windows'
+            # CHANGED: Combine ALL Windows variants into single "Windows" category
+            return 'Windows'
         elif 'linux' in os_name:
             if 'ubuntu' in os_name:
                 return 'Ubuntu Linux'
@@ -437,7 +426,6 @@ class ConnectSecureProcessor:
             return 'Unknown'
         else:
             return os_name.title()
-
     def _process_compliance_data(self, compliance: Dict[str, Any]) -> Dict[str, Any]:
         """Process compliance status data into metrics."""
         if not compliance:
@@ -1003,23 +991,25 @@ class ConnectSecureProcessor:
             }
             print(f"🔍 DEBUG: Using fallback risk score metrics: {security_risk_score_metrics}")
 
-        # NEW: Process asset status data with fallback
-        asset_status_metrics = self._process_asset_status_data(asset_view_data)
-        print(f"🔍 DEBUG: Asset status metrics: {asset_status_metrics}")
+        # NEW: Process asset type distribution data - BOTH monthly and live
+        asset_type_monthly_metrics = self._process_asset_type_distribution(asset_view_data)
+        asset_type_live_metrics = self._process_asset_type_distribution(assets)
+        print(f"🔍 DEBUG: Asset type MONTHLY metrics: {asset_type_monthly_metrics}")
+        print(f"🔍 DEBUG: Asset type LIVE metrics: {asset_type_live_metrics}")
 
-        # FALLBACK: If asset_view_data is empty, use the same data as asset_inventory
-        if (asset_status_metrics["asset_status"]["online"] == 0 and
-            asset_status_metrics["asset_status"]["offline"] == 0 and
-            assets_to_use):
-            print(f"🔍 DEBUG: Asset view data empty, using asset inventory status data")
-            # Extract status from asset_metrics which already processed the assets correctly
-            asset_status_metrics = {
-                "asset_status": {
-                    "online": asset_metrics["online_assets"],
-                    "offline": asset_metrics["offline_assets"]
-                }
-            }
-            print(f"🔍 DEBUG: Using fallback asset status: {asset_status_metrics}")
+        # Combine into new structure
+        asset_type_distribution_metrics = self._combine_asset_type_metrics(asset_type_monthly_metrics, asset_type_live_metrics)
+        print(f"🔍 DEBUG: Combined asset type distribution metrics: {asset_type_distribution_metrics}")
+
+        # NEW: Process OS distribution data - BOTH monthly and live
+        os_dist_monthly_metrics = self._process_os_distribution(asset_view_data)
+        os_dist_live_metrics = self._process_os_distribution(assets)
+        print(f"🔍 DEBUG: OS distribution MONTHLY metrics: {os_dist_monthly_metrics}")
+        print(f"🔍 DEBUG: OS distribution LIVE metrics: {os_dist_live_metrics}")
+
+        # Combine into new structure
+        os_distribution_metrics = self._combine_os_distribution_metrics(os_dist_monthly_metrics, os_dist_live_metrics)
+        print(f"🔍 DEBUG: Combined OS distribution metrics: {os_distribution_metrics}")
 
         # Process other metrics (keep for backward compatibility)
         vulnerability_metrics = self._process_vulnerability_data(vulnerabilities)
@@ -1049,8 +1039,11 @@ class ConnectSecureProcessor:
                 # Real security risk score with distribution
                 **security_risk_score_metrics,  # Merges security_risk_score directly
 
-                # Real asset status data
-                **asset_status_metrics,  # Merges asset_status directly
+                # Real asset type distribution data
+                **asset_type_distribution_metrics,  # Merges asset_type_distribution directly
+
+                # Real OS distribution data
+                **os_distribution_metrics,  # Merges operating_system_distribution directly
 
                 # Other metrics
                 "security_incidents": incident_metrics,
@@ -1629,5 +1622,106 @@ class ConnectSecureProcessor:
 
         return {
             "vulnerability_severity": vulnerability_data
+        }
+
+    def _process_asset_type_distribution(self, assets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process assets to extract asset type distribution (discovered, other_asset, unknown)."""
+        print(f"🔍 DEBUG: Processing {len(assets)} assets for asset type distribution")
+
+        if not assets:
+            return {
+                "asset_type_distribution": {
+                    "discovered": 0,
+                    "other_asset": 0,
+                    "unknown": 0
+                }
+            }
+
+        # Count asset types using asset_type field from raw data
+        type_counts = {'discovered': 0, 'other_asset': 0, 'unknown': 0}
+        for asset in assets:
+            asset_type = asset.get('asset_type', 'unknown')
+            if asset_type in ['discovered', 'other_asset']:
+                type_counts[asset_type] += 1
+            else:
+                type_counts['unknown'] += 1
+
+        print(f"🔍 DEBUG: Asset type distribution counts: {type_counts}")
+
+        return {
+            "asset_type_distribution": type_counts
+        }
+
+    def _combine_asset_type_metrics(self, monthly_metrics: Dict[str, Any], live_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Combine monthly and live asset type distribution metrics into the new structure.
+        Returns asset_type_distribution with live_count and monthly_count sub-objects.
+        """
+        monthly_types = monthly_metrics.get("asset_type_distribution", {})
+        live_types = live_metrics.get("asset_type_distribution", {})
+
+        return {
+            "asset_type_distribution": {
+                "live_count": {
+                    "discovered": live_types.get("discovered", 0),
+                    "other_asset": live_types.get("other_asset", 0),
+                    "unknown": live_types.get("unknown", 0)
+                },
+                "monthly_count": {
+                    "discovered": monthly_types.get("discovered", 0),
+                    "other_asset": monthly_types.get("other_asset", 0),
+                    "unknown": monthly_types.get("unknown", 0)
+                }
+            }
+        }
+
+    def _process_os_distribution(self, assets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process assets to extract OS distribution (Windows 11, Windows Server, Linux, Others)."""
+        print(f"🔍 DEBUG: Processing {len(assets)} assets for OS distribution")
+
+        if not assets:
+            return {
+                "operating_system_distribution": {
+                    "Others": 0
+                }
+            }
+
+        # Only count discovered assets
+        discovered_assets = [asset for asset in assets if asset.get('asset_type') == 'discovered']
+
+        os_counts = {}
+        for asset in discovered_assets:
+            os_name = self._extract_os_name(asset)
+            os_name = self._standardize_os_name(str(os_name))
+
+            # Change "Unknown" to "Others"
+            if os_name in ['Unknown', 'unknown', '']:
+                os_name = 'Others'
+
+            os_counts[os_name] = os_counts.get(os_name, 0) + 1
+
+        print(f"🔍 DEBUG: OS distribution counts: {os_counts}")
+
+        # If no OS data at all, add Others
+        if not os_counts:
+            os_counts['Others'] = len(discovered_assets) if discovered_assets else 0
+
+        return {
+            "operating_system_distribution": os_counts
+        }
+
+    def _combine_os_distribution_metrics(self, monthly_metrics: Dict[str, Any], live_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Combine monthly and live OS distribution metrics into the new structure.
+        Returns operating_system_distribution with live_count and monthly_count sub-objects.
+        """
+        monthly_os = monthly_metrics.get("operating_system_distribution", {})
+        live_os = live_metrics.get("operating_system_distribution", {})
+
+        return {
+            "operating_system_distribution": {
+                "live_count": live_os,
+                "monthly_count": monthly_os
+            }
         }
 
