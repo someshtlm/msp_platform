@@ -62,37 +62,75 @@ class SupabaseCredentialManager:
 
     def get_organization_by_id(self, org_id: int) -> Optional[Dict[str, Any]]:
         """
-        NEW: Get organization-specific IDs from organizations table by org_id.
-        Returns ninjaone_org_id, autotask_id, connect_secure_id for the organization.
+        NEW: Get organization-specific platform IDs using organization_integrations table.
+        Uses get_org_integrations() RPC function to fetch platform IDs.
 
         Args:
             org_id: Organization ID (integer)
 
         Returns:
-            Dict with ninjaone_org_id, autotask_id, connect_secure_id, account_id, organization_name
+            Dict with ninjaone_org_id, autotask_id, connectsecure_id, account_id, organization_name
         """
         try:
-            response = self.supabase.table('organizations')\
-                .select('*')\
+            # Call get_org_integrations RPC function
+            integrations_response = self.supabase.rpc('get_org_integrations', {
+                'p_org_id': org_id
+            }).execute()
+
+            if not integrations_response.data or len(integrations_response.data) == 0:
+                logger.error(f"No integrations found for org_id: {org_id}")
+                return None
+
+            # Get organization basic info
+            org_response = self.supabase.table('organizations')\
+                .select('id, account_id, organization_name')\
                 .eq('id', org_id)\
                 .limit(1)\
                 .execute()
 
-            if not response.data or len(response.data) == 0:
+            if not org_response.data or len(org_response.data) == 0:
                 logger.error(f"No organization found for org_id: {org_id}")
                 return None
 
-            org_data = response.data[0]
+            org_basic_info = org_response.data[0]
 
-            # Map database column names to expected names for backward compatibility
-            org_data['connectsecure_id'] = org_data.get('connect_secure_id')
-            org_data['name'] = org_data.get('organization_name')
+            # Build org_data with platform IDs from integrations
+            org_data = {
+                'id': org_basic_info['id'],
+                'account_id': org_basic_info['account_id'],
+                'organization_name': org_basic_info['organization_name'],
+                'name': org_basic_info['organization_name'],  # Backward compatibility
+            }
+
+            # Map integration_key to expected field names
+            platform_mapping = {
+                'ninjaone': 'ninjaone_org_id',
+                'autotask': 'autotask_id',
+                'connectsecure': 'connectsecure_id'
+            }
+
+            # Extract platform IDs from RPC response
+            for integration in integrations_response.data:
+                integration_key = integration.get('integration_key')
+                platform_id = integration.get('platform_id')
+
+                if integration_key in platform_mapping:
+                    field_name = platform_mapping[integration_key]
+                    org_data[field_name] = platform_id
+
+                    # Also add connectsecure_id variant for backward compatibility
+                    if integration_key == 'connectsecure':
+                        org_data['connect_secure_id'] = platform_id
 
             logger.info(f"Successfully retrieved organization data for org_id: {org_id} - {org_data.get('organization_name')}")
+            logger.info(f"  Platform IDs: NinjaOne={org_data.get('ninjaone_org_id')}, Autotask={org_data.get('autotask_id')}, ConnectSecure={org_data.get('connectsecure_id')}")
+
             return org_data
 
         except Exception as e:
             logger.error(f"Failed to fetch organization for org_id {org_id}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
 
     def get_credentials_by_id(self, credential_id: str = None) -> Optional[Dict[str, Any]]:
