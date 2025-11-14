@@ -112,6 +112,7 @@ from endpoints.complaince_status_post_endpoints import router as post_router
 from endpoints.client_management import router as client_router
 from endpoints.report_endpoint import router as report_router
 from endpoints.cache_test_endpoints import router as cache_test_router
+from endpoints.integration_platform_charts_endpoints import router as integration_platform_router
 
 
 
@@ -126,6 +127,7 @@ app.include_router(user_router, prefix="/api", tags=["users dashboard"])
 app.include_router(client_router, prefix="/api",tags=["client page"])
 app.include_router(report_router, prefix="/api", tags=["security reports"])
 app.include_router(cache_test_router, prefix="/api", tags=["cache testing"])
+app.include_router(integration_platform_router, prefix="/api", tags=["integration platforms"])
 
 # Configure static file serving for PDF reports
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

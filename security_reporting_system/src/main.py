@@ -211,14 +211,21 @@ class SecurityAssessmentOrchestrator:
         logger.info(f"  Autotask Company ID: {autotask_company_id}")
         logger.info(f"  ConnectSecure Company ID: {connectsecure_company_id}")
 
-        # Initialize processors with account_id and org-specific IDs
-        self.ninjaone_processor = NinjaOneProcessor(
-            account_id=self.account_id,
-            ninjaone_org_id=ninjaone_org_id
-        )
-        self.autotask_processor = AutotaskProcessor(account_id=self.account_id)
+        if ninjaone_org_id:
+            self.ninjaone_processor = NinjaOneProcessor(
+                account_id=self.account_id,
+                ninjaone_org_id=ninjaone_org_id
+            )
+        else:
+            logger.warning(f"No NinjaOne org_id found - NinjaOne data will be skipped")
+            self.ninjaone_processor = None
 
-        # Only initialize ConnectSecure processor if we have a valid company_id
+        if autotask_company_id:
+            self.autotask_processor = AutotaskProcessor(account_id=self.account_id)
+        else:
+            logger.warning(f"No Autotask company_id found - Autotask data will be skipped")
+            self.autotask_processor = None
+
         if connectsecure_company_id:
             self.connectsecure_processor = ConnectSecureProcessor(
                 account_id=self.account_id,
@@ -244,15 +251,22 @@ class SecurityAssessmentOrchestrator:
         autotask_company_id = organization_mapping.get('autotask_company_id')
         connectsecure_company_id = organization_mapping.get('connectsecure_company_id')
 
-        # NEW: Initialize processors with account_id
         if self.account_id is not None:
-            self.ninjaone_processor = NinjaOneProcessor(
-                account_id=self.account_id,
-                ninjaone_org_id=ninjaone_org_id
-            )
-            self.autotask_processor = AutotaskProcessor(account_id=self.account_id)
+            if ninjaone_org_id:
+                self.ninjaone_processor = NinjaOneProcessor(
+                    account_id=self.account_id,
+                    ninjaone_org_id=ninjaone_org_id
+                )
+            else:
+                logger.warning(f"No NinjaOne org_id found - NinjaOne data will be skipped")
+                self.ninjaone_processor = None
 
-            # Only initialize ConnectSecure processor if we have a valid company_id
+            if autotask_company_id:
+                self.autotask_processor = AutotaskProcessor(account_id=self.account_id)
+            else:
+                logger.warning(f"No Autotask company_id found - Autotask data will be skipped")
+                self.autotask_processor = None
+
             if connectsecure_company_id:
                 self.connectsecure_processor = ConnectSecureProcessor(
                     account_id=self.account_id,
@@ -262,14 +276,22 @@ class SecurityAssessmentOrchestrator:
                 logger.warning(f"No ConnectSecure company_id found - ConnectSecure data will be skipped")
                 self.connectsecure_processor = None
 
-        # OLD: Fallback to legacy credential_id
         elif self.credential_id is not None:
             logger.warning("Using DEPRECATED credential_id method. Please migrate to account_id.")
-            self.ninjaone_processor = NinjaOneProcessor(
-                credential_id=self.credential_id,
-                ninjaone_org_id=ninjaone_org_id
-            )
-            self.autotask_processor = AutotaskProcessor(credential_id=self.credential_id)
+            if ninjaone_org_id:
+                self.ninjaone_processor = NinjaOneProcessor(
+                    credential_id=self.credential_id,
+                    ninjaone_org_id=ninjaone_org_id
+                )
+            else:
+                logger.warning(f"No NinjaOne org_id found - NinjaOne data will be skipped")
+                self.ninjaone_processor = None
+
+            if autotask_company_id:
+                self.autotask_processor = AutotaskProcessor(credential_id=self.credential_id)
+            else:
+                logger.warning(f"No Autotask company_id found - Autotask data will be skipped")
+                self.autotask_processor = None
 
             if connectsecure_company_id:
                 self.connectsecure_processor = ConnectSecureProcessor(
@@ -338,36 +360,34 @@ class SecurityAssessmentOrchestrator:
 
         final_data = {}
 
-        # 1. Fetch and process NinjaOne data
-        logger.info("🔧 Processing NinjaOne data...")
-        try:
-            ninjaone_raw = self.ninjaone_processor.fetch_all_data(use_time_filter=True, month_name=month_name)
-            ninjaone_processed = self.ninjaone_processor.process_all_data(ninjaone_raw)
-            final_data.update(ninjaone_processed)
+        if self.ninjaone_processor:
+            logger.info("🔧 Processing NinjaOne data...")
+            try:
+                ninjaone_raw = self.ninjaone_processor.fetch_all_data(use_time_filter=True, month_name=month_name)
+                ninjaone_processed = self.ninjaone_processor.process_all_data(ninjaone_raw)
+                final_data.update(ninjaone_processed)
+                _ninjaone_cache = ninjaone_raw
+                logger.info("✅ NinjaOne data processed successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to process NinjaOne data: {e}")
+                raise
+        else:
+            logger.info("⏭️ Skipping NinjaOne - not configured")
 
-            # Cache for PDF generator
-            _ninjaone_cache = ninjaone_raw
-
-            logger.info("✅ NinjaOne data processed successfully")
-        except Exception as e:
-            logger.error(f"❌ Failed to process NinjaOne data: {e}")
-            raise
-
-        # 2. Fetch and process Autotask data
-        logger.info("🎫 Processing Autotask data...")
-        try:
-            autotask_raw = await self.autotask_processor.fetch_all_data(company_id, month_name)
-            autotask_processed = self.autotask_processor.process_all_data(autotask_raw, company_id)
-            final_data.update(autotask_processed)
-            final_data["execution_info"]["data_sources"].append("Autotask")
-
-            # Cache for PDF generator
-            _autotask_cache = autotask_raw
-
-            logger.info("✅ Autotask data processed successfully")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to process Autotask data: {e}")
-            logger.info("🔄 Continuing with NinjaOne data only...")
+        if self.autotask_processor:
+            logger.info("🎫 Processing Autotask data...")
+            try:
+                autotask_raw = await self.autotask_processor.fetch_all_data(company_id, month_name)
+                autotask_processed = self.autotask_processor.process_all_data(autotask_raw, company_id)
+                final_data.update(autotask_processed)
+                final_data["execution_info"]["data_sources"].append("Autotask")
+                _autotask_cache = autotask_raw
+                logger.info("✅ Autotask data processed successfully")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to process Autotask data: {e}")
+                logger.info("🔄 Continuing without Autotask data...")
+        else:
+            logger.info("⏭️ Skipping Autotask - not configured")
 
         # 3. Fetch and process ConnectSecure data
         if self.connectsecure_processor:
@@ -397,27 +417,32 @@ class SecurityAssessmentOrchestrator:
         """Test connectivity to all data sources."""
         results = {}
 
-        # Test NinjaOne (synchronous)
-        try:
-            # Simple test: try to fetch organization info
-            org_info = self.ninjaone_processor.client.get_organization_info()
-            results['ninjaone'] = bool(org_info.get('id'))
-        except Exception as e:
-            logger.error(f"NinjaOne connection test failed: {e}")
+        if self.ninjaone_processor:
+            try:
+                org_info = self.ninjaone_processor.client.get_organization_info()
+                results['ninjaone'] = bool(org_info.get('id'))
+            except Exception as e:
+                logger.error(f"NinjaOne connection test failed: {e}")
+                results['ninjaone'] = False
+        else:
             results['ninjaone'] = False
 
-        # Test Autotask (asynchronous)
-        try:
-            results['autotask'] = await self.autotask_processor.test_connection()
-        except Exception as e:
-            logger.error(f"Autotask connection test failed: {e}")
+        if self.autotask_processor:
+            try:
+                results['autotask'] = await self.autotask_processor.test_connection()
+            except Exception as e:
+                logger.error(f"Autotask connection test failed: {e}")
+                results['autotask'] = False
+        else:
             results['autotask'] = False
 
-        # Test ConnectSecure
-        try:
-            results['connectsecure'] = self.connectsecure_processor.test_connection()
-        except Exception as e:
-            logger.error(f"ConnectSecure connection test failed: {e}")
+        if self.connectsecure_processor:
+            try:
+                results['connectsecure'] = self.connectsecure_processor.test_connection()
+            except Exception as e:
+                logger.error(f"ConnectSecure connection test failed: {e}")
+                results['connectsecure'] = False
+        else:
             results['connectsecure'] = False
 
         return results
@@ -564,11 +589,10 @@ async def main() -> None:
 
             print(f"\nJSON report saved: {json_filename}")
 
-        # Frontend-optimized JSON output
         if args.output == 'frontend':
             logger.info("Generating frontend-optimized JSON...")
             transformer = FrontendTransformer()
-            frontend_json = transformer.transform_to_frontend_json(final_output)
+            frontend_json = transformer.transform_to_frontend_json(final_output, account_id=args.account_id)
 
             frontend_output = json.dumps(frontend_json, indent=2, default=str)
             print(frontend_output)  # Print to console

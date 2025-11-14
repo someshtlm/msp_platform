@@ -1,6 +1,16 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.account_selected_charts (
+  id integer NOT NULL DEFAULT nextval('account_selected_charts_id_seq'::regclass),
+  account_id integer NOT NULL,
+  chart_id integer NOT NULL,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT account_selected_charts_pkey PRIMARY KEY (id),
+  CONSTRAINT account_selected_charts_account_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id),
+  CONSTRAINT account_selected_charts_chart_fkey FOREIGN KEY (chart_id) REFERENCES public.platform_available_charts(id)
+);
 CREATE TABLE public.accounts (
   id integer NOT NULL DEFAULT nextval('accounts_id_seq'::regclass),
   account_name character varying NOT NULL,
@@ -51,6 +61,17 @@ CREATE TABLE public.integration_credentials (
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT integration_credentials_pkey PRIMARY KEY (id),
   CONSTRAINT integration_credentials_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id)
+);
+CREATE TABLE public.integrations (
+  id integer NOT NULL DEFAULT nextval('integrations_id_seq'::regclass),
+  integration_key character varying NOT NULL UNIQUE,
+  integration_display_name character varying NOT NULL,
+  description text,
+  integration_fields jsonb,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT integrations_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.license_sku_mappings (
   id integer NOT NULL DEFAULT nextval('license_sku_mappings_id_seq'::regclass),
@@ -259,12 +280,25 @@ CREATE TABLE public.m365_users (
   CONSTRAINT m365_users_pkey PRIMARY KEY (id),
   CONSTRAINT m365_users_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
 );
+CREATE TABLE public.organization_integrations (
+  id integer NOT NULL DEFAULT nextval('organization_integrations_id_seq'::regclass),
+  organization_id integer NOT NULL,
+  integration_id integer NOT NULL,
+  platform_organization_id character varying NOT NULL,
+  is_active boolean DEFAULT true,
+  last_synced timestamp without time zone,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT organization_integrations_pkey PRIMARY KEY (id),
+  CONSTRAINT organization_integrations_org_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT organization_integrations_integration_fkey FOREIGN KEY (integration_id) REFERENCES public.integrations(id)
+);
 CREATE TABLE public.organization_pocs (
   id integer NOT NULL DEFAULT nextval('organization_pocs_id_seq'::regclass),
   organization_id integer NOT NULL,
   poc_name character varying NOT NULL,
   poc_email character varying NOT NULL,
-  poc_role character varying NOT NULL,
+  poc_role character varying,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT organization_pocs_pkey PRIMARY KEY (id),
@@ -281,12 +315,20 @@ CREATE TABLE public.organizations (
   status character varying DEFAULT 'Active'::character varying,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  ninjaone_org_id character varying,
-  connect_secure_id character varying,
-  autotask_id character varying,
   CONSTRAINT organizations_pkey PRIMARY KEY (id),
-  CONSTRAINT organizations_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id),
-  CONSTRAINT organizations_platform_user_id_fkey FOREIGN KEY (platform_user_id) REFERENCES public.platform_users(id)
+  CONSTRAINT organizations_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id)
+);
+CREATE TABLE public.platform_available_charts (
+  id integer NOT NULL DEFAULT nextval('platform_available_charts_id_seq'::regclass),
+  integration_id integer NOT NULL,
+  chart_key character varying NOT NULL,
+  chart_display_name character varying NOT NULL,
+  chart_description text,
+  chart_type character varying,
+  json_path character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT platform_available_charts_pkey PRIMARY KEY (id),
+  CONSTRAINT platform_available_charts_integration_fkey FOREIGN KEY (integration_id) REFERENCES public.integrations(id)
 );
 CREATE TABLE public.platform_users (
   id integer NOT NULL DEFAULT nextval('platform_users_id_seq'::regclass),

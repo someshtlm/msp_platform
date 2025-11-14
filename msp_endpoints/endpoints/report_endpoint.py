@@ -741,8 +741,9 @@ async def generate_security_report_json_endpoint(
 
         # Step 2: Get organization details and validate it belongs to the account
         try:
+            # Get basic organization info
             org_response = supabase.table('organizations')\
-                .select('id, account_id, organization_name, ninjaone_org_id, autotask_id, connect_secure_id, status')\
+                .select('id, account_id, organization_name, status')\
                 .eq('id', org_id)\
                 .eq('account_id', account_id)\
                 .eq('status', 'Active')\
@@ -758,18 +759,22 @@ async def generate_security_report_json_endpoint(
                 )
 
             organization = org_response.data[0]
-            ninjaone_org_id = organization.get('ninjaone_org_id')
             org_name = organization.get('organization_name')
 
-            logger.info(f"Validated organization: {org_name} (ninjaone_org_id: {ninjaone_org_id})")
+            # Get platform IDs from organization_integrations using RPC function
+            integrations_response = supabase.rpc('get_org_integrations', {
+                'p_org_id': org_id
+            }).execute()
 
-            if not ninjaone_org_id:
-                logger.error(f"Organization {org_id} has no ninjaone_org_id configured")
-                return GraphApiResponse(
-                    status_code=400,
-                    data=None,
-                    error=f"Organization {org_name} is not configured with NinjaOne integration"
-                )
+            # Extract ninjaone_org_id from integrations
+            ninjaone_org_id = None
+            if integrations_response.data:
+                for integration in integrations_response.data:
+                    if integration.get('integration_key') == 'ninjaone':
+                        ninjaone_org_id = integration.get('platform_id')
+                        break
+
+            logger.info(f"Validated organization: {org_name} (ninjaone_org_id: {ninjaone_org_id})")
 
         except Exception as e:
             logger.error(f"Error fetching organization {org_id}: {e}")
@@ -850,12 +855,11 @@ async def generate_security_report_json_endpoint(
                 error=f"Security data generation failed: {str(e)}"
             )
 
-        # Transform the data using FrontendTransformer
         try:
             logger.info("Transforming data using FrontendTransformer...")
 
             transformer = FrontendTransformer()
-            frontend_json = transformer.transform_to_frontend_json(security_data)
+            frontend_json = transformer.transform_to_frontend_json(security_data, account_id=account_id)
 
             if not frontend_json:
                 logger.error("Frontend transformation returned empty result")
@@ -1451,44 +1455,108 @@ async def save_integration_credentials_endpoint(request: SaveIntegrationCredenti
         organizations_failed = 0
 
         try:
+            # Get integration IDs for mapping
+            integrations_map = {}
+            try:
+                integrations_list = supabase.table('integrations')\
+                    .select('id, integration_key')\
+                    .execute()
+
+                for integration in integrations_list.data:
+                    integrations_map[integration['integration_key']] = integration['id']
+
+                logger.info(f"Loaded integrations map: {integrations_map}")
+            except Exception as e:
+                logger.error(f"Failed to load integrations: {e}")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error=f"Failed to load platform integrations: {str(e)}"
+                )
+
             for mapping in organization_mappings:
                 try:
-                    # Check if organization already exists
+                    # Check if organization already exists by organization_name and account_id
                     existing_org = supabase.table('organizations') \
                         .select('id') \
                         .eq('account_id', request.companyId) \
-                        .eq('ninjaone_org_id', mapping['ninjaone_org_id']) \
+                        .eq('organization_name', mapping['organization_name']) \
                         .limit(1) \
                         .execute()
 
                     org_data = {
                         'account_id': request.companyId,
                         'organization_name': mapping['organization_name'],
-                        'ninjaone_org_id': mapping['ninjaone_org_id'],
-                        'autotask_id': mapping.get('autotask_id'),
-                        'connect_secure_id': mapping.get('connect_secure_id'),
                         'status': 'Active',
                         'updated_at': datetime.now().isoformat()
                     }
 
+                    org_id = None
                     if existing_org.data and len(existing_org.data) > 0:
-                        # Update existing
+                        # Update existing organization
                         org_id = existing_org.data[0]['id']
                         supabase.table('organizations')\
                             .update(org_data)\
                             .eq('id', org_id)\
                             .execute()
                         organizations_updated += 1
+                        logger.info(f"Updated organization: {mapping['organization_name']} (ID: {org_id})")
                     else:
-                        # Insert new
+                        # Insert new organization
                         org_data['created_at'] = datetime.now().isoformat()
-                        supabase.table('organizations')\
+                        insert_result = supabase.table('organizations')\
                             .insert(org_data)\
                             .execute()
+                        org_id = insert_result.data[0]['id']
                         organizations_created += 1
+                        logger.info(f"Created new organization: {mapping['organization_name']} (ID: {org_id})")
+
+                    # Now insert/update organization_integrations for each platform
+                    platform_mappings = {
+                        'ninjaone': mapping.get('ninjaone_org_id'),
+                        'autotask': mapping.get('autotask_id'),
+                        'connectsecure': mapping.get('connect_secure_id')
+                    }
+
+                    for platform_key, platform_org_id in platform_mappings.items():
+                        if platform_org_id and platform_key in integrations_map:
+                            integration_id = integrations_map[platform_key]
+
+                            # Check if integration mapping exists
+                            existing_integration = supabase.table('organization_integrations')\
+                                .select('id')\
+                                .eq('organization_id', org_id)\
+                                .eq('integration_id', integration_id)\
+                                .limit(1)\
+                                .execute()
+
+                            integration_data = {
+                                'organization_id': org_id,
+                                'integration_id': integration_id,
+                                'platform_organization_id': str(platform_org_id),
+                                'is_active': True,
+                                'last_synced': datetime.now().isoformat(),
+                                'updated_at': datetime.now().isoformat()
+                            }
+
+                            if existing_integration.data and len(existing_integration.data) > 0:
+                                # Update existing integration mapping
+                                supabase.table('organization_integrations')\
+                                    .update(integration_data)\
+                                    .eq('id', existing_integration.data[0]['id'])\
+                                    .execute()
+                                logger.debug(f"  Updated {platform_key} integration mapping")
+                            else:
+                                # Insert new integration mapping
+                                integration_data['created_at'] = datetime.now().isoformat()
+                                supabase.table('organization_integrations')\
+                                    .insert(integration_data)\
+                                    .execute()
+                                logger.debug(f"  Created {platform_key} integration mapping")
 
                 except Exception as e:
                     logger.error(f"Failed to save organization {mapping.get('organization_name')}: {e}")
+                    logger.error(f"Error details: {str(e)}")
                     organizations_failed += 1
 
             logger.info(f"Organizations saved: {organizations_created} created, {organizations_updated} updated, {organizations_failed} failed")

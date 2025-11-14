@@ -33,15 +33,16 @@ class FrontendTransformer:
     def __init__(self):
         pass
 
-    def transform_to_frontend_json(self, full_data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform_to_frontend_json(self, full_data: Dict[str, Any], account_id: int = None) -> Dict[str, Any]:
         """
         Transform the full security assessment data into frontend-optimized JSON.
 
         Args:
             full_data: Complete data from SecurityAssessmentOrchestrator
+            account_id: Account ID for filtering selected charts (optional)
 
         Returns:
-            Frontend-optimized JSON structure
+            Frontend-optimized JSON structure filtered by account's selected charts
         """
         try:
             # Validate input data
@@ -64,24 +65,48 @@ class FrontendTransformer:
                 logger.warning(f"Failed to extract organization info: {e}")
                 frontend_json["organization"] = {"id": "unknown", "name": "Unknown Organization"}
 
-            # NEW STRUCTURE: Group charts and tables by platform
+            selected_charts = None
+            if account_id:
+                try:
+                    from config.supabase_client import SupabaseCredentialManager
+                    supabase_manager = SupabaseCredentialManager()
+                    charts_response = supabase_manager.supabase.rpc('get_account_charts', {
+                        'p_account_id': account_id
+                    }).execute()
+
+                    if charts_response.data:
+                        selected_charts = {}
+                        for chart in charts_response.data:
+                            integration_key = chart.get('integration_key')
+                            chart_key = chart.get('chart_key')
+                            json_path = chart.get('json_path')
+
+                            if integration_key not in selected_charts:
+                                selected_charts[integration_key] = []
+                            selected_charts[integration_key].append({
+                                'chart_key': chart_key,
+                                'json_path': json_path
+                            })
+
+                        logger.info(f"Loaded {len(charts_response.data)} selected charts for account {account_id}")
+                        logger.info(f"Selected charts by platform: {dict((k, len(v)) for k, v in selected_charts.items())}")
+                    else:
+                        logger.warning(f"No selected charts found for account {account_id} - returning all charts")
+                except Exception as e:
+                    logger.error(f"Failed to load selected charts for account {account_id}: {e}")
+                    logger.warning("Falling back to returning all charts")
+
+            def is_chart_selected(platform_key, chart_key):
+                if not selected_charts:
+                    return True
+                if platform_key not in selected_charts:
+                    return False
+                return any(c['chart_key'] == chart_key for c in selected_charts[platform_key])
+
             try:
-                # Extract all chart and table data
                 charts_data = self._extract_chart_data(full_data)
                 table_data = self._extract_table_data(full_data)
 
-                # Initialize platform objects
-                frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
-                frontend_json["Autotask"] = {"charts": {}}
-                frontend_json["ConnectSecure"] = {"charts": {}}
-
-                # === NinjaOne Charts ===
-                if "patch_management_enablement" in charts_data:
-                    frontend_json["NinjaOne"]["charts"]["patch_management_enablement"] = charts_data["patch_management_enablement"]
-                if "patch_status_distribution" in charts_data:
-                    frontend_json["NinjaOne"]["charts"]["patch_status_distribution"] = charts_data["patch_status_distribution"]
-
-                # Extract tickets_by_contact for Autotask
                 tickets_by_contact_data = table_data.get("tickets_by_contact", [])
                 contacts_summary = None
                 contacts_list = []
@@ -91,52 +116,112 @@ class FrontendTransformer:
                     else:
                         contacts_list.append(item)
 
-                # Add patch_management and devices_with_failed_patches to NinjaOne charts
-                frontend_json["NinjaOne"]["charts"]["patch_management"] = table_data.get("patch_management", {
-                    "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []},
-                    "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []}
-                })
-                frontend_json["NinjaOne"]["charts"]["devices_with_failed_patches"] = table_data.get("devices_with_failed_patches", {
-                    "count": 0, "devices": [], "message": "No devices with failed patches"
-                })
+                if is_chart_selected('ninjaone', 'patch_management_enablement') and "patch_management_enablement" in charts_data:
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    frontend_json["NinjaOne"]["charts"]["patch_management_enablement"] = charts_data["patch_management_enablement"]
 
-                # === NinjaOne Tables ===
-                frontend_json["NinjaOne"]["tables"]["device_inventory"] = table_data.get("device_inventory", [])
-                frontend_json["NinjaOne"]["tables"]["device_inventory_server"] = table_data.get("device_inventory_server", [])
+                if is_chart_selected('ninjaone', 'patch_status_distribution') and "patch_status_distribution" in charts_data:
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    frontend_json["NinjaOne"]["charts"]["patch_status_distribution"] = charts_data["patch_status_distribution"]
 
-                # === Autotask Charts ===
-                if "daily_tickets_trend" in charts_data:
+                if is_chart_selected('ninjaone', 'patch_management'):
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    frontend_json["NinjaOne"]["charts"]["patch_management"] = table_data.get("patch_management", {
+                        "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []},
+                        "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []}
+                    })
+
+                if is_chart_selected('ninjaone', 'devices_with_failed_patches'):
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    frontend_json["NinjaOne"]["charts"]["devices_with_failed_patches"] = table_data.get("devices_with_failed_patches", {
+                        "count": 0, "devices": [], "message": "No devices with failed patches"
+                    })
+
+                if is_chart_selected('ninjaone', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    frontend_json["NinjaOne"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
+
+                if is_chart_selected('ninjaone', 'device_inventory'):
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    if "tables" not in frontend_json["NinjaOne"]:
+                        frontend_json["NinjaOne"]["tables"] = {}
+                    frontend_json["NinjaOne"]["tables"]["device_inventory"] = table_data.get("device_inventory", [])
+
+                if is_chart_selected('ninjaone', 'device_inventory_server'):
+                    if "NinjaOne" not in frontend_json:
+                        frontend_json["NinjaOne"] = {"charts": {}, "tables": {}}
+                    if "tables" not in frontend_json["NinjaOne"]:
+                        frontend_json["NinjaOne"]["tables"] = {}
+                    frontend_json["NinjaOne"]["tables"]["device_inventory_server"] = table_data.get("device_inventory_server", [])
+
+                if is_chart_selected('autotask', 'daily_tickets_trend') and "daily_tickets_trend" in charts_data:
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
                     frontend_json["Autotask"]["charts"]["daily_tickets_trend"] = charts_data["daily_tickets_trend"]
-                if "monthly_tickets_by_type" in charts_data:
+
+                if is_chart_selected('autotask', 'monthly_tickets_by_type') and "monthly_tickets_by_type" in charts_data:
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
                     frontend_json["Autotask"]["charts"]["monthly_tickets_by_type"] = charts_data["monthly_tickets_by_type"]
-                if "open_tickets_by_issue_type" in charts_data:
+
+                if is_chart_selected('autotask', 'open_tickets_by_issue_type') and "open_tickets_by_issue_type" in charts_data:
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
                     frontend_json["Autotask"]["charts"]["open_tickets_by_issue_type"] = charts_data["open_tickets_by_issue_type"]
-                if "open_ticket_priority_distribution" in charts_data:
+
+                if is_chart_selected('autotask', 'open_ticket_priority_distribution') and "open_ticket_priority_distribution" in charts_data:
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
                     frontend_json["Autotask"]["charts"]["open_ticket_priority_distribution"] = charts_data["open_ticket_priority_distribution"]
-                if "sla_performance" in charts_data:
+
+                if is_chart_selected('autotask', 'sla_performance') and "sla_performance" in charts_data:
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
                     frontend_json["Autotask"]["charts"]["sla_performance"] = charts_data["sla_performance"]
 
-                frontend_json["Autotask"]["charts"]["tickets_by_contact"] = {
-                    "tickets_by_contact_summary": {
-                        "contacts_summary": contacts_summary if contacts_summary else {
-                            "contacts_count": 0,
-                            "total_tickets": 0,
-                            "top_contact": "Unknown"
-                        }
-                    },
-                    "data": contacts_list
-                }
+                if is_chart_selected('autotask', 'tickets_by_contact'):
+                    if "Autotask" not in frontend_json:
+                        frontend_json["Autotask"] = {"charts": {}}
+                    frontend_json["Autotask"]["charts"]["tickets_by_contact"] = {
+                        "tickets_by_contact_summary": {
+                            "contacts_summary": contacts_summary if contacts_summary else {
+                                "contacts_count": 0,
+                                "total_tickets": 0,
+                                "top_contact": "Unknown"
+                            }
+                        },
+                        "data": contacts_list
+                    }
 
-                # === ConnectSecure Charts ===
-                if "asset_type_distribution" in charts_data:
+                if is_chart_selected('connectsecure', 'asset_type_distribution') and "asset_type_distribution" in charts_data:
+                    if "ConnectSecure" not in frontend_json:
+                        frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["asset_type_distribution"] = charts_data["asset_type_distribution"]
-                if "operating_system_distribution" in charts_data:
+
+                if is_chart_selected('connectsecure', 'operating_system_distribution') and "operating_system_distribution" in charts_data:
+                    if "ConnectSecure" not in frontend_json:
+                        frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["operating_system_distribution"] = charts_data["operating_system_distribution"]
-                if "security_risk_score" in charts_data:
+
+                if is_chart_selected('connectsecure', 'security_risk_score') and "security_risk_score" in charts_data:
+                    if "ConnectSecure" not in frontend_json:
+                        frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["security_risk_score"] = charts_data["security_risk_score"]
-                if "vulnerability_severity" in charts_data:
+
+                if is_chart_selected('connectsecure', 'vulnerability_severity') and "vulnerability_severity" in charts_data:
+                    if "ConnectSecure" not in frontend_json:
+                        frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["vulnerability_severity"] = charts_data["vulnerability_severity"]
-                if "agent_type_distribution" in charts_data:
+
+                if is_chart_selected('connectsecure', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
+                    if "ConnectSecure" not in frontend_json:
+                        frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
 
             except Exception as e:
