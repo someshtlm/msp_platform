@@ -351,8 +351,7 @@ class SecurityAssessmentOrchestrator:
         return await self.collect_all_data(company_id=autotask_company_id, month_name=month_name)
 
     async def collect_all_data(self, company_id: Optional[int] = None, month_name: str = None) -> Dict[str, Any]:
-        """Collect data from all available sources with caching."""
-        # Reset cache for this execution
+        """Collect data from all available sources with caching - NOW PARALLEL."""
         global _ninjaone_cache, _autotask_cache, _cache_timestamp
         _ninjaone_cache = None
         _autotask_cache = None
@@ -360,56 +359,100 @@ class SecurityAssessmentOrchestrator:
 
         final_data = {}
 
-        if self.ninjaone_processor:
-            logger.info("🔧 Processing NinjaOne data...")
+        async def fetch_ninjaone():
+            if not self.ninjaone_processor:
+                logger.info("Skipping NinjaOne - not configured")
+                return None, None
+            logger.info("Fetching NinjaOne data...")
             try:
-                ninjaone_raw = self.ninjaone_processor.fetch_all_data(use_time_filter=True, month_name=month_name)
-                ninjaone_processed = self.ninjaone_processor.process_all_data(ninjaone_raw)
-                final_data.update(ninjaone_processed)
-                _ninjaone_cache = ninjaone_raw
-                logger.info("✅ NinjaOne data processed successfully")
+                raw = await asyncio.to_thread(
+                    self.ninjaone_processor.fetch_all_data,
+                    use_time_filter=True,
+                    month_name=month_name
+                )
+                logger.info("NinjaOne data fetched successfully")
+                return raw, None
             except Exception as e:
-                logger.error(f"❌ Failed to process NinjaOne data: {e}")
-                raise
-        else:
-            logger.info("⏭️ Skipping NinjaOne - not configured")
+                logger.error(f"Failed to fetch NinjaOne data: {e}")
+                return None, e
 
-        if self.autotask_processor:
-            logger.info("🎫 Processing Autotask data...")
+        async def fetch_autotask():
+            if not self.autotask_processor:
+                logger.info("Skipping Autotask - not configured")
+                return None, None
+            logger.info("Fetching Autotask data...")
             try:
-                autotask_raw = await self.autotask_processor.fetch_all_data(company_id, month_name)
-                autotask_processed = self.autotask_processor.process_all_data(autotask_raw, company_id)
-                final_data.update(autotask_processed)
+                raw = await self.autotask_processor.fetch_all_data(company_id, month_name)
+                logger.info("Autotask data fetched successfully")
+                return raw, None
+            except Exception as e:
+                logger.warning(f"Failed to fetch Autotask data: {e}")
+                return None, e
+
+        async def fetch_connectsecure():
+            if not self.connectsecure_processor:
+                logger.info("Skipping ConnectSecure - not configured")
+                return None, None
+            logger.info("Fetching ConnectSecure data...")
+            try:
+                raw = await asyncio.to_thread(
+                    self.connectsecure_processor.fetch_all_data,
+                    self.connectsecure_processor.company_id,
+                    month_name
+                )
+                logger.info("ConnectSecure data fetched successfully")
+                return raw, None
+            except Exception as e:
+                logger.warning(f"Failed to fetch ConnectSecure data: {e}")
+                return None, e
+
+        logger.info("Starting PARALLEL data fetching from all platforms...")
+
+        ninjaone_result, autotask_result, connectsecure_result = await asyncio.gather(
+            fetch_ninjaone(),
+            fetch_autotask(),
+            fetch_connectsecure()
+        )
+
+        logger.info("Processing fetched data...")
+
+        ninjaone_raw, ninjaone_error = ninjaone_result
+        if ninjaone_raw and not ninjaone_error:
+            logger.info("Processing NinjaOne data...")
+            ninjaone_processed = self.ninjaone_processor.process_all_data(ninjaone_raw)
+            final_data.update(ninjaone_processed)
+            _ninjaone_cache = ninjaone_raw
+            logger.info("NinjaOne data processed successfully")
+        elif ninjaone_error:
+            logger.error(f"NinjaOne fetch failed: {ninjaone_error}")
+
+        autotask_raw, autotask_error = autotask_result
+        if autotask_raw and not autotask_error:
+            logger.info("Processing Autotask data...")
+            autotask_processed = self.autotask_processor.process_all_data(autotask_raw, company_id)
+            final_data.update(autotask_processed)
+            if "execution_info" in final_data:
                 final_data["execution_info"]["data_sources"].append("Autotask")
-                _autotask_cache = autotask_raw
-                logger.info("✅ Autotask data processed successfully")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to process Autotask data: {e}")
-                logger.info("🔄 Continuing without Autotask data...")
-        else:
-            logger.info("⏭️ Skipping Autotask - not configured")
+            _autotask_cache = autotask_raw
+            logger.info("Autotask data processed successfully")
+        elif autotask_error:
+            logger.warning(f"Autotask fetch failed: {autotask_error}")
+            logger.info("Continuing without Autotask data...")
 
-        # 3. Fetch and process ConnectSecure data
-        if self.connectsecure_processor:
-            logger.info("🔒 Processing ConnectSecure data with FIXED authentication...")
-            try:
-                # Use the ConnectSecure company_id from the processor instance (set during initialization)
-                connectsecure_raw = self.connectsecure_processor.fetch_all_data(self.connectsecure_processor.company_id, month_name)
+        connectsecure_raw, connectsecure_error = connectsecure_result
+        if connectsecure_raw and not connectsecure_error:
+            if len(connectsecure_raw.get('assets', [])) > 0:
+                logger.info("Processing ConnectSecure data...")
                 connectsecure_processed = self.connectsecure_processor.process_all_data(connectsecure_raw, month_name=month_name)
-
-                # SIMPLIFIED: Always add ConnectSecure data if we got any assets
-                if len(connectsecure_raw.get('assets', [])) > 0:
-                    final_data.update(connectsecure_processed)
+                final_data.update(connectsecure_processed)
+                if "execution_info" in final_data:
                     final_data["execution_info"]["data_sources"].append("ConnectSecure")
-                    logger.info("✅ ConnectSecure data processed successfully")
-                else:
-                    logger.warning("⚠️ ConnectSecure: No assets found")
-
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to process ConnectSecure data: {e}")
-                logger.info("🔄 Continuing with available data sources...")
-        else:
-            logger.info("⚠️ ConnectSecure processor not available - skipping ConnectSecure data")
+                logger.info("ConnectSecure data processed successfully")
+            else:
+                logger.warning("ConnectSecure: No assets found")
+        elif connectsecure_error:
+            logger.warning(f"ConnectSecure fetch failed: {connectsecure_error}")
+            logger.info("Continuing with available data sources...")
 
         return final_data
 
