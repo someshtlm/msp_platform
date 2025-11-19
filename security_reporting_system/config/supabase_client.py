@@ -72,10 +72,13 @@ class SupabaseCredentialManager:
             Dict with ninjaone_org_id, autotask_id, connectsecure_id, account_id, organization_name
         """
         try:
-            # Call get_org_integrations RPC function
-            integrations_response = self.supabase.rpc('get_org_integrations', {
-                'p_org_id': org_id
-            }).execute()
+            # Query organization_integrations table directly to avoid RPC function overloading conflict
+            integrations_response = self.supabase.table('organization_integrations')\
+                .select('organization_id, integration_id, integrations!inner(integration_key), platform_organization_id')\
+                .eq('organization_id', org_id)\
+                .execute()
+
+            logger.info(f"=== INTEGRATIONS QUERY RESPONSE FOR ORG {org_id}: {integrations_response.data} ===")
 
             if not integrations_response.data or len(integrations_response.data) == 0:
                 logger.error(f"No integrations found for org_id: {org_id}")
@@ -106,24 +109,32 @@ class SupabaseCredentialManager:
             platform_mapping = {
                 'ninjaone': 'ninjaone_org_id',
                 'autotask': 'autotask_id',
-                'connectsecure': 'connectsecure_id'
+                'connectsecure': 'connectsecure_id',
+                'bitdefender': 'bitdefender_company_id'
             }
 
-            # Extract platform IDs from RPC response
+            # Extract platform IDs from table query response
             for integration in integrations_response.data:
-                integration_key = integration.get('integration_key')
-                platform_id = integration.get('platform_id')
+                # Response format: {organization_id, integration_id, integrations: {integration_key}, platform_organization_id}
+                integration_key = integration.get('integrations', {}).get('integration_key')
+                platform_id = integration.get('platform_organization_id')
+
+                logger.info(f"=== PROCESSING INTEGRATION: key={integration_key}, platform_id={platform_id} ===")
 
                 if integration_key in platform_mapping:
                     field_name = platform_mapping[integration_key]
                     org_data[field_name] = platform_id
+                    logger.info(f"=== MAPPED {integration_key} -> {field_name} = {platform_id} ===")
 
                     # Also add connectsecure_id variant for backward compatibility
                     if integration_key == 'connectsecure':
                         org_data['connect_secure_id'] = platform_id
 
+            logger.info(f"=== FINAL ORG_DATA KEYS: {list(org_data.keys())} ===")
+            logger.info(f"=== BITDEFENDER_COMPANY_ID IN ORG_DATA: {org_data.get('bitdefender_company_id')} ===")
+
             logger.info(f"Successfully retrieved organization data for org_id: {org_id} - {org_data.get('organization_name')}")
-            logger.info(f"  Platform IDs: NinjaOne={org_data.get('ninjaone_org_id')}, Autotask={org_data.get('autotask_id')}, ConnectSecure={org_data.get('connectsecure_id')}")
+            logger.info(f"  Platform IDs: NinjaOne={org_data.get('ninjaone_org_id')}, Autotask={org_data.get('autotask_id')}, ConnectSecure={org_data.get('connectsecure_id')}, Bitdefender={org_data.get('bitdefender_company_id')}")
 
             return org_data
 
