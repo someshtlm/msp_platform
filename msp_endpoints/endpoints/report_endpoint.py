@@ -8,7 +8,7 @@ import base64
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path, Depends, Query
 from fastapi.responses import StreamingResponse
-from typing import Optional
+from typing import Optional, Dict, Any
 from models import GraphApiResponse
 from schemas import AccountAllocationRequest, SaveIntegrationCredentialsRequest
 
@@ -761,17 +761,19 @@ async def generate_security_report_json_endpoint(
             organization = org_response.data[0]
             org_name = organization.get('organization_name')
 
-            # Get platform IDs from organization_integrations using RPC function
-            integrations_response = supabase.rpc('get_org_integrations', {
-                'p_org_id': org_id
-            }).execute()
+            # Get platform IDs from organization_integrations table directly (avoid RPC overloading conflict)
+            integrations_response = supabase.table('organization_integrations')\
+                .select('organization_id, integration_id, integrations!inner(integration_key), platform_organization_id')\
+                .eq('organization_id', org_id)\
+                .execute()
 
             # Extract ninjaone_org_id from integrations
             ninjaone_org_id = None
             if integrations_response.data:
                 for integration in integrations_response.data:
-                    if integration.get('integration_key') == 'ninjaone':
-                        ninjaone_org_id = integration.get('platform_id')
+                    integration_key = integration.get('integrations', {}).get('integration_key')
+                    if integration_key == 'ninjaone':
+                        ninjaone_org_id = integration.get('platform_organization_id')
                         break
 
             logger.info(f"Validated organization: {org_name} (ninjaone_org_id: {ninjaone_org_id})")
@@ -895,6 +897,168 @@ async def generate_security_report_json_endpoint(
             status_code=500,
             data=None,
             error=f"Internal server error: {str(e)}"
+        )
+
+
+def filter_platform_data(frontend_json: Dict[str, Any], platform_name: str) -> Dict[str, Any]:
+    """
+    Filter frontend JSON to return only specific platform data.
+
+    Args:
+        frontend_json: Full frontend JSON with all platforms
+        platform_name: Platform to extract (NinjaOne, Autotask, ConnectSecure)
+
+    Returns:
+        Filtered JSON with organization + single platform + execution_info
+    """
+    filtered = {
+        "organization": frontend_json.get("organization", {}),
+        "execution_info": frontend_json.get("execution_info", {})
+    }
+
+    if platform_name in frontend_json:
+        filtered[platform_name] = frontend_json[platform_name]
+
+    return filtered
+
+
+@router.get("/GenerateNinjaOneReportJSON/{user_id}/{org_id}", response_model=GraphApiResponse,
+            summary="Generate NinjaOne-Only Security Report JSON")
+async def generate_ninjaone_report_json_endpoint(
+        user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
+        org_id: int = Path(..., description="Organization ID"),
+        month: Optional[str] = Query(None, description="Report month name")
+):
+    """
+    Generate security report JSON containing ONLY NinjaOne platform data.
+
+    Returns structure: {"organization": {...}, "NinjaOne": {...}, "execution_info": {...}}
+    Respects account_selected_charts filtering.
+    """
+    try:
+        full_response = await generate_security_report_json_endpoint(user_id, org_id, month)
+
+        if full_response.status_code != 200 or not full_response.data:
+            return full_response
+
+        filtered_data = filter_platform_data(full_response.data, "NinjaOne")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=filtered_data,
+            error=None
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate NinjaOne report: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Failed to generate NinjaOne report: {str(e)}"
+        )
+
+
+@router.get("/GenerateAutotaskReportJSON/{user_id}/{org_id}", response_model=GraphApiResponse,
+            summary="Generate Autotask-Only Security Report JSON")
+async def generate_autotask_report_json_endpoint(
+        user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
+        org_id: int = Path(..., description="Organization ID"),
+        month: Optional[str] = Query(None, description="Report month name")
+):
+    """
+    Generate security report JSON containing ONLY Autotask platform data.
+
+    Returns structure: {"organization": {...}, "Autotask": {...}, "execution_info": {...}}
+    Respects account_selected_charts filtering.
+    """
+    try:
+        full_response = await generate_security_report_json_endpoint(user_id, org_id, month)
+
+        if full_response.status_code != 200 or not full_response.data:
+            return full_response
+
+        filtered_data = filter_platform_data(full_response.data, "Autotask")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=filtered_data,
+            error=None
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate Autotask report: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Failed to generate Autotask report: {str(e)}"
+        )
+
+
+@router.get("/GenerateConnectSecureReportJSON/{user_id}/{org_id}", response_model=GraphApiResponse,
+            summary="Generate ConnectSecure-Only Security Report JSON")
+async def generate_connectsecure_report_json_endpoint(
+        user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
+        org_id: int = Path(..., description="Organization ID"),
+        month: Optional[str] = Query(None, description="Report month name")
+):
+    """
+    Generate security report JSON containing ONLY ConnectSecure platform data.
+
+    Returns structure: {"organization": {...}, "ConnectSecure": {...}, "execution_info": {...}}
+    Respects account_selected_charts filtering.
+    """
+    try:
+        full_response = await generate_security_report_json_endpoint(user_id, org_id, month)
+
+        if full_response.status_code != 200 or not full_response.data:
+            return full_response
+
+        filtered_data = filter_platform_data(full_response.data, "ConnectSecure")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=filtered_data,
+            error=None
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate ConnectSecure report: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Failed to generate ConnectSecure report: {str(e)}"
+        )
+
+
+@router.get("/GenerateBitdefenderReportJSON/{user_id}/{org_id}", response_model=GraphApiResponse,
+            summary="Generate Bitdefender-Only Security Report JSON")
+async def generate_bitdefender_report_json_endpoint(
+        user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
+        org_id: int = Path(..., description="Organization ID"),
+        month: Optional[str] = Query(None, description="Report month name")
+):
+    """
+    Generate security report JSON containing ONLY Bitdefender platform data.
+
+    Returns structure: {"organization": {...}, "Bitdefender": {...}, "execution_info": {...}}
+    Respects account_selected_charts filtering.
+    """
+    try:
+        full_response = await generate_security_report_json_endpoint(user_id, org_id, month)
+
+        if full_response.status_code != 200 or not full_response.data:
+            return full_response
+
+        filtered_data = filter_platform_data(full_response.data, "Bitdefender")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=filtered_data,
+            error=None
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate Bitdefender report: {e}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Failed to generate Bitdefender report: {str(e)}"
         )
 
 
