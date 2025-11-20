@@ -307,7 +307,6 @@ CREATE TABLE public.organization_pocs (
 CREATE TABLE public.organizations (
   id integer NOT NULL DEFAULT nextval('organizations_id_seq'::regclass),
   account_id integer,
-  platform_user_id integer,
   organization_name character varying NOT NULL,
   domain character varying,
   industry character varying,
