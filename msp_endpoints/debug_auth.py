@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 async def test_auth():
     """Test the authentication flow step by step"""
-    client_id = "b15b18dc-ffad-43c5-b7ca-3f14626f1e0e"
+    client_id = ""
 
     print("=== Testing Authentication Flow ===")
     print(f"Testing with client_id: {client_id}")
