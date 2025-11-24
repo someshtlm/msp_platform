@@ -227,6 +227,36 @@ class FrontendTransformer:
                         frontend_json["ConnectSecure"] = {"charts": {}}
                     frontend_json["ConnectSecure"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
 
+                # Bitdefender charts
+                bitdefender_metrics = full_data.get("bitdefender_metrics", {})
+                if bitdefender_metrics:
+                    bd_charts = bitdefender_metrics.get("charts", {})
+                    bd_tables = bitdefender_metrics.get("tables", {})
+
+                    # Chart 1: Endpoint Utilization (combined: activeEndpoints, managedEndpoints)
+                    if is_chart_selected('bitdefender', 'endpoint_utilization_bitdefender') and "endpoint_utilization_bitdefender" in bd_charts:
+                        if "Bitdefender" not in frontend_json:
+                            frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
+                        frontend_json["Bitdefender"]["charts"]["endpoint_utilization_bitdefender"] = bd_charts["endpoint_utilization_bitdefender"]
+
+                    # Chart 2: Risk Score
+                    if is_chart_selected('bitdefender', 'riskScore_bitdefender') and "riskScore_bitdefender" in bd_charts:
+                        if "Bitdefender" not in frontend_json:
+                            frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
+                        frontend_json["Bitdefender"]["charts"]["riskScore_bitdefender"] = bd_charts["riskScore_bitdefender"]
+
+                    # Chart 3: Inventory Summary
+                    if is_chart_selected('bitdefender', 'inventory_summary_bitdefender') and "inventory_summary_bitdefender" in bd_charts:
+                        if "Bitdefender" not in frontend_json:
+                            frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
+                        frontend_json["Bitdefender"]["charts"]["inventory_summary_bitdefender"] = bd_charts["inventory_summary_bitdefender"]
+
+                    # Table 1: Network Inventory
+                    if is_chart_selected('bitdefender', 'networkinventory_bitdefender') and "networkinventory_bitdefender" in bd_tables:
+                        if "Bitdefender" not in frontend_json:
+                            frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
+                        frontend_json["Bitdefender"]["tables"]["networkinventory_bitdefender"] = bd_tables["networkinventory_bitdefender"]
+
             except Exception as e:
                 logger.warning(f"Failed to extract chart/table data: {e}")
                 # Fallback structure
@@ -265,6 +295,37 @@ class FrontendTransformer:
                         "security_risk_score": {"live_count": None, "monthly_count": None},
                         "vulnerability_severity": {"live_count": {"critical": 0, "high": 0, "medium": 0, "low": 0}, "monthly_count": {"critical": 0, "high": 0, "medium": 0, "low": 0}},
                         "agent_type_distribution": {}
+                    }
+                }
+                frontend_json["Bitdefender"] = {
+                    "charts": {
+                        "endpoint_utilization_bitdefender": {
+                            "activeEndpoints": 0,
+                            "managedEndpoints": 0
+                        },
+                        "riskScore_bitdefender": {
+                            "value": None,
+                            "impact": None,
+                            "misconfigurations": None,
+                            "appVulnerabilities": None,
+                            "humanRisks": None,
+                            "industryModifier": None
+                        },
+                        "inventory_summary_bitdefender": {
+                            "summary": {
+                                "windowsWorkstations": 0,
+                                "windowsServers": 0,
+                                "macOS": 0,
+                                "linux": 0
+                            },
+                            "count": {
+                                "physicalMachines": 0,
+                                "virtualMachines": 0
+                            }
+                        }
+                    },
+                    "tables": {
+                        "networkinventory_bitdefender": []
                     }
                 }
 

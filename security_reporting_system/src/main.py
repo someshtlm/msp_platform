@@ -21,11 +21,13 @@ try:
     from security_reporting_system.src.processors.ninjaone_processor import NinjaOneProcessor
     from security_reporting_system.src.processors.autotask_processor import AutotaskProcessor
     from security_reporting_system.src.processors.connectsecure_processor import ConnectSecureProcessor
+    from security_reporting_system.src.processors.bitdefender_processor import BitdefenderProcessor
     from security_reporting_system.src.utils.frontend_transformer import FrontendTransformer
 except ImportError:
     from src.processors.ninjaone_processor import NinjaOneProcessor
     from src.processors.autotask_processor import AutotaskProcessor
     from src.processors.connectsecure_processor import ConnectSecureProcessor
+    from src.processors.bitdefender_processor import BitdefenderProcessor
     from src.utils.frontend_transformer import FrontendTransformer
 
 # Import PDF report generator - UNCHANGED
@@ -205,11 +207,13 @@ class SecurityAssessmentOrchestrator:
         ninjaone_org_id = org_data.get('ninjaone_org_id')
         autotask_company_id = org_data.get('autotask_id')
         connectsecure_company_id = org_data.get('connectsecure_id')
+        bitdefender_company_id = org_data.get('bitdefender_company_id')
 
         logger.info(f"Organization: {org_data.get('name', 'Unknown')} (ID: {self.org_id})")
         logger.info(f"  NinjaOne Org ID: {ninjaone_org_id}")
         logger.info(f"  Autotask Company ID: {autotask_company_id}")
         logger.info(f"  ConnectSecure Company ID: {connectsecure_company_id}")
+        logger.info(f"  Bitdefender Company ID: {bitdefender_company_id}")
 
         if ninjaone_org_id:
             self.ninjaone_processor = NinjaOneProcessor(
@@ -235,10 +239,20 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"No ConnectSecure company_id found - ConnectSecure data will be skipped")
             self.connectsecure_processor = None
 
+        if bitdefender_company_id:
+            self.bitdefender_processor = BitdefenderProcessor(
+                account_id=self.account_id,
+                bitdefender_company_id=bitdefender_company_id
+            )
+        else:
+            logger.warning(f"No Bitdefender company_id found - Bitdefender data will be skipped")
+            self.bitdefender_processor = None
+
         return {
             'ninjaone_org_id': ninjaone_org_id,
             'autotask_company_id': autotask_company_id,
             'connectsecure_company_id': connectsecure_company_id,
+            'bitdefender_company_id': bitdefender_company_id,
             'organization_name': org_data.get('name', 'Unknown')
         }
 
@@ -406,12 +420,31 @@ class SecurityAssessmentOrchestrator:
                 logger.warning(f"Failed to fetch ConnectSecure data: {e}")
                 return None, e
 
+        async def fetch_bitdefender():
+            if not self.bitdefender_processor:
+                logger.info("=== SKIPPING BITDEFENDER - NOT CONFIGURED FOR THIS ORG ===")
+                return None, None
+            logger.info("=== FETCHING BITDEFENDER DATA ===")
+            try:
+                raw = await asyncio.to_thread(
+                    self.bitdefender_processor.fetch_all_data,
+                    month_name
+                )
+                logger.info(f"=== BITDEFENDER DATA FETCHED: {len(raw.get('endpoints_list', []))} endpoints, {len(raw.get('network_inventory', []))} inventory items ===")
+                return raw, None
+            except Exception as e:
+                logger.error(f"=== BITDEFENDER FETCH FAILED: {e} ===")
+                import traceback
+                logger.error(traceback.format_exc())
+                return None, e
+
         logger.info("Starting PARALLEL data fetching from all platforms...")
 
-        ninjaone_result, autotask_result, connectsecure_result = await asyncio.gather(
+        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result = await asyncio.gather(
             fetch_ninjaone(),
             fetch_autotask(),
-            fetch_connectsecure()
+            fetch_connectsecure(),
+            fetch_bitdefender()
         )
 
         logger.info("Processing fetched data...")
@@ -453,6 +486,21 @@ class SecurityAssessmentOrchestrator:
         elif connectsecure_error:
             logger.warning(f"ConnectSecure fetch failed: {connectsecure_error}")
             logger.info("Continuing with available data sources...")
+
+        bitdefender_raw, bitdefender_error = bitdefender_result
+        if bitdefender_raw and not bitdefender_error:
+            logger.info("=== PROCESSING BITDEFENDER DATA ===")
+            bitdefender_processed = self.bitdefender_processor.process_all_data(bitdefender_raw)
+            logger.info(f"=== BITDEFENDER PROCESSED DATA KEYS: {list(bitdefender_processed.keys())} ===")
+            final_data.update(bitdefender_processed)
+            if "execution_info" in final_data:
+                final_data["execution_info"]["data_sources"].append("Bitdefender")
+            logger.info("=== BITDEFENDER DATA ADDED TO FINAL OUTPUT ===")
+        elif bitdefender_error:
+            logger.error(f"=== BITDEFENDER FETCH FAILED: {bitdefender_error} ===")
+            logger.info("Continuing with available data sources...")
+        else:
+            logger.info("=== BITDEFENDER: NO DATA (PROCESSOR NOT CONFIGURED) ===")
 
         return final_data
 

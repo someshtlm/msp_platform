@@ -62,6 +62,35 @@ class PolicyIdEnum(str, Enum):
 
 
 # =============================================================================
+# INTEGRATION PLATFORM CREDENTIALS
+# =============================================================================
+
+class SavePlatformCredentialsRequest(BaseModel):
+    """Request model for saving single platform credentials and chart selections"""
+    uuid: str = Field(..., description="User UUID from auth.users")
+    platform_id: int = Field(..., description="Platform ID from integrations table")
+    platform_name: Optional[str] = Field(None, description="Platform display name")
+    status: Optional[str] = Field(None, description="Platform status")
+    credentials: Dict[str, str] = Field(..., description="Platform credentials as key-value pairs")
+    chartlist_selected_by_user: List[Dict[str, Any]] = Field(..., description="List of selected charts")
+
+    @validator('uuid')
+    def validate_uuid(cls, v):
+        if not v or not v.strip():
+            raise ValueError('UUID is required')
+        return v.strip()
+
+    @validator('chartlist_selected_by_user')
+    def validate_chartlist(cls, v):
+        if v is None:
+            return []
+        for chart in v:
+            if 'chart_id' not in chart:
+                raise ValueError('Each chart must have chart_id')
+        return v
+
+
+# =============================================================================
 # COMPLIANCE FIX OPERATION SCHEMAS
 # =============================================================================
 

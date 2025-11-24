@@ -11,6 +11,9 @@ from fastapi.responses import StreamingResponse
 from typing import Optional, Dict, Any
 from models import GraphApiResponse
 from schemas import AccountAllocationRequest, SaveIntegrationCredentialsRequest
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Add msp_platform root to Python path so we can import security_reporting_system as a package
 msp_platform_root = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -53,9 +56,9 @@ print("=== DEBUG: Attempting Import ===")
 try:
     from security_reporting_system.src.main import SecurityAssessmentOrchestrator
 
-    print("✅ SecurityAssessmentOrchestrator imported successfully")
+    print(" SecurityAssessmentOrchestrator imported successfully")
 except ImportError as e:
-    print(f"❌ Failed to import SecurityAssessmentOrchestrator: {e}")
+    print(f"Failed to import SecurityAssessmentOrchestrator: {e}")
     import traceback
 
     traceback.print_exc()
@@ -65,23 +68,23 @@ except ImportError as e:
     try:
         import security_reporting_system
 
-        print("✅ security_reporting_system package imported")
+        print("security_reporting_system package imported")
     except ImportError as e:
-        print(f"❌ security_reporting_system package: {e}")
+        print(f"security_reporting_system package: {e}")
 
     try:
         from security_reporting_system import src
 
-        print("✅ security_reporting_system.src imported")
+        print("security_reporting_system.src imported")
     except ImportError as e:
-        print(f"❌ security_reporting_system.src: {e}")
+        print(f"security_reporting_system.src: {e}")
 
     try:
         from security_reporting_system.src import main
 
-        print("✅ security_reporting_system.src.main imported")
+        print(" security_reporting_system.src.main imported")
     except ImportError as e:
-        print(f"❌ security_reporting_system.src.main: {e}")
+        print(f" security_reporting_system.src.main: {e}")
 # === END DEBUG CODE ===
 
 # Add msp_platform root to Python path so we can import security_reporting_system as a package
@@ -210,7 +213,8 @@ async def generate_security_report_json_endpoint(
             f"Generating security report JSON for user_id: {user_id}, org_id: {org_id}, month: {month or 'previous_month'}")
 
         # HARDCODED DEMO DATA FOR SPECIFIC USER
-        if user_id == "201d1004-4d25-4466-9d10-1936afd62a78":
+        demo_user_id = os.getenv("DEMO_USER_ID", "")
+        if demo_user_id and user_id == demo_user_id:
             logger.info(f"Returning hardcoded demo data for user_id: {user_id}")
             demo_data = {
                     "organization": {
@@ -630,6 +634,58 @@ async def generate_security_report_json_endpoint(
                             }
                         }
                     },
+                    "Cove": {
+                        "charts": {
+                            "total_devices_storage_summary_cove": {
+                              "totalDevices": 10,
+                              "totalStorage": 4.30
+                            },
+                            "asset_type_distribution_cove": {
+                              "workstations": 7,
+                              "servers": 3,
+                              "others": 0
+                            },
+                            "devices_distribution_cove": {
+                              "physical": 7,
+                              "virtual": 3,
+                              "others": 0
+                            },
+                            "retention_policy_distribution_cove": {
+                              "365 Day Retention": 4,
+                              "90D-52W-36M-7Y 2": 3,
+                              "180 Day Retention": 5
+                              }
+                            }
+                          },
+                    "Proofpoint": {
+                            "charts": {
+                              "threat_by_org_pp": [
+                                { "organization": "TechCorp", "spam": 8900, "virus": 450, "phishing": 820 },
+                                { "organization": "Global Finance", "spam": 6200, "virus": 320, "phishing": 640 },
+                                { "organization": "Healthcare", "spam": 4800, "virus": 280, "phishing": 510 }
+                              ],
+                              "traffic_direction_comparison_pp": [
+                                { "category": "Clean", "inbound": 12500, "outbound": 11800 },
+                                { "category": "Spam", "inbound": 8900, "outbound": 1200 },
+                                { "category": "Virus", "inbound": 450, "outbound": 85 },
+                                { "category": "Fraud", "inbound": 320, "outbound": 45 },
+                                { "category": "Blacklist", "inbound": 680, "outbound": 120 }
+                              ],
+                              "top_orgs_by_inbound_volume_pp": {
+                                "TechCorp Industries": 58200,
+                                "Global Finance Ltd": 41500,
+                                "Healthcare Systems": 32800,
+                                "Manufacturing Co": 24100,
+                                "Retail Solutions": 18900
+                              },
+                              "inbound_mail_composition_pp": {
+                                "clean": 1500,
+                                "spam": 5200,
+                                "virus": 1850,
+                                "fraud": 720
+                              }
+                            }
+                          },
                     "ConnectSecure": {
                         "charts": {
                             "asset_type_distribution": {
@@ -690,6 +746,135 @@ async def generate_security_report_json_endpoint(
                             }
                         }
                     },
+                    "Bitdefender": {
+                    "charts": {
+                        "endpoint_utilization_bitdefender": {
+                            "activeEndpoints": 80,
+                            "managedEndpoints": 82
+                        },
+                        "riskScore_bitdefender" : {
+                                "value": "50%",
+                                "impact": "Medium",
+                                "misconfigurations": "80%",
+                                "appVulnerabilities": "30%",
+                                "humanRisks": "10%",
+                                "industryModifier": "0%"},
+                     "inventory_summary_bitdefender": {
+                            "summary": {
+                                "windowsWorkstations": 82,
+                                "windowsServers": 1,
+                                "macOS": 0,
+                                "linux": 0
+                            },
+                            "count": {
+                                "physicalMachines": 82,
+                                "virtualMachines": 1
+                            }
+                        }
+            },
+            "tables": {
+                "networkinventory_bitdefender": [
+                    {
+                        "Module": "antimalware",
+                        "enable": 80,
+                        "disable": 0,
+                        "notInstalled": 2,
+                        "displayName": "Antimalware"
+                    },
+                    {
+                        "Module": "advancedThreatControl",
+                        "enable": 81,
+                        "disable": 1,
+                        "notInstalled": 0,
+                        "displayName": "Advanced Threat Control"
+                    },
+                    {
+                        "Module": "advancedAntiExploit",
+                        "enable": 82,
+                        "disable": 0,
+                        "notInstalled": 0,
+                        "displayName": "Advanced Anti-Exploit"
+                    },
+                    {
+                        "Module": "firewall",
+                        "enable": 78,
+                        "disable": 1,
+                        "notInstalled": 3,
+                        "displayName": "Firewall"
+                    },
+                    {
+                        "Module": "networkAttackDefense",
+                        "enable": 75,
+                        "disable": 2,
+                        "notInstalled": 5,
+                        "displayName": "Network Protection"
+                    },
+                    {
+                        "Module": "deviceControl",
+                        "enable": 82,
+                        "disable": 0,
+                        "notInstalled": 0,
+                        "displayName": "Device Control"
+                    },
+                    {
+                        "Module": "encryption",
+                        "enable": 2,
+                        "disable": 0,
+                        "notInstalled": 80,
+                        "displayName": "Encryption"
+                    },
+                    {
+                        "Module": "patchManagement",
+                        "enable": 70,
+                        "disable": 5,
+                        "notInstalled": 7,
+                        "displayName": "Patch Management"
+                    },
+                    {
+                        "Module": "edrSensor",
+                        "enable": 65,
+                        "disable": 0,
+                        "notInstalled": 17,
+                        "displayName": "EDR Sensor"
+                    },
+                    {
+                        "Module": "powerUser",
+                        "enable": 12,
+                        "disable": 0,
+                        "notInstalled": 70,
+                        "displayName": "Power User"
+                    },
+                    {
+                        "Module": "exchange",
+                        "enable": 0,
+                        "disable": 0,
+                        "notInstalled": 82,
+                        "displayName": "Exchange Protection"
+                    },
+                    {
+                        "Module": "containerProtection",
+                        "enable": 0,
+                        "disable": 0,
+                        "notInstalled": 82,
+                        "displayName": "Container Protection"
+                    },
+                    {
+                        "Module": "integrityMonitoring",
+                        "enable": 10,
+                        "disable": 3,
+                        "notInstalled": 70,
+                        "displayName": "Integrity Monitoring"
+                    },
+                    {
+                        "Module": "phASR",
+                        "enable": 5,
+                        "disable": 0,
+                        "notInstalled": 77,
+                        "displayName": "PHASR"
+                    }
+                ]
+            }
+            },
                     "execution_info": {
                         "generated_at": "2025-10-09T19:05:15.407535",
                         "data_sources_processed": [
@@ -711,7 +896,6 @@ async def generate_security_report_json_endpoint(
         # Step 1: Get account_id from user_id using Supabase RPC function
         try:
             from supabase import create_client
-            import os
 
             supabase_url = os.getenv("SUPABASE_URL")
             supabase_key = os.getenv("SUPABASE_KEY")

@@ -93,9 +93,9 @@ async def encrypt_existing_secrets():
                 if tenant_id and tenant_id.strip():
                     # Check if already encrypted (basic check - encrypted values are longer)
                     if len(tenant_id) > 100 and '=' in tenant_id[-10:]:
-                        print(f"    tenant_id appears already encrypted (length: {len(tenant_id)})")
+                        print(f"  ⚠️  tenant_id appears already encrypted (length: {len(tenant_id)})")
                     else:
-                        print(f"   Encrypting tenant_id (current length: {len(tenant_id)})...")
+                        print(f"  🔐 Encrypting tenant_id (current length: {len(tenant_id)})...")
                         encrypted_tenant_id = encrypt_client_secret(tenant_id)
                         update_data['tenant_id'] = encrypted_tenant_id
                         print(f"  ✓ tenant_id encrypted successfully (new length: {len(encrypted_tenant_id)})")
@@ -104,9 +104,9 @@ async def encrypt_existing_secrets():
                 if client_id and client_id.strip():
                     # Check if already encrypted
                     if len(client_id) > 100 and '=' in client_id[-10:]:
-                        print(f"   client_id appears already encrypted (length: {len(client_id)})")
+                        print(f"  ⚠️  client_id appears already encrypted (length: {len(client_id)})")
                     else:
-                        print(f"  Encrypting client_id (current length: {len(client_id)})...")
+                        print(f"  🔐 Encrypting client_id (current length: {len(client_id)})...")
                         encrypted_client_id = encrypt_client_secret(client_id)
                         update_data['client_id'] = encrypted_client_id
                         print(f"  ✓ client_id encrypted successfully (new length: {len(encrypted_client_id)})")
@@ -115,16 +115,16 @@ async def encrypt_existing_secrets():
                 if client_secret and client_secret.strip():
                     # Check if already encrypted
                     if len(client_secret) > 100 and '=' in client_secret[-10:]:
-                        print(f"    client_secret appears already encrypted (length: {len(client_secret)})")
+                        print(f"  ⚠️  client_secret appears already encrypted (length: {len(client_secret)})")
                     else:
-                        print(f"   Encrypting client_secret (current length: {len(client_secret)})...")
+                        print(f"  🔐 Encrypting client_secret (current length: {len(client_secret)})...")
                         encrypted_client_secret = encrypt_client_secret(client_secret)
                         update_data['client_secret'] = encrypted_client_secret
                         print(f"  ✓ client_secret encrypted successfully (new length: {len(encrypted_client_secret)})")
 
                 # Update in database if there's anything to update
                 if update_data:
-                    print(f"   Updating database with {len(update_data)} encrypted field(s)...")
+                    print(f"  💾 Updating database with {len(update_data)} encrypted field(s)...")
 
                     if record_id:
                         update_response = supabase.table('m365_credentials').update(
@@ -132,27 +132,27 @@ async def encrypt_existing_secrets():
                         ).eq('id', record_id).execute()
 
                         if update_response.data:
-                            print(f"   Successfully updated in database")
+                            print(f"  ✅ Successfully updated in database")
                             updated_count += 1
                         else:
-                            print(f"   Failed to update in database")
+                            print(f"  ❌ Failed to update in database")
                             failed_count += 1
                     else:
-                        print(f"   No ID found for record")
+                        print(f"  ❌ No ID found for record")
                         failed_count += 1
                 else:
-                    print(f"   No new fields to encrypt (all already encrypted)")
+                    print(f"  ⏭️  No new fields to encrypt (all already encrypted)")
 
             except Exception as e:
-                print(f"   Error processing record: {str(e)}")
+                print(f"  ❌ Error processing record: {str(e)}")
                 failed_count += 1
                 continue
 
         print("\n" + "="*50)
-        print("ENCRYPTION COMPLETE!")
-        print(f"Successfully encrypted: {updated_count} records")
+        print("🎉 ENCRYPTION COMPLETE!")
+        print(f"✅ Successfully encrypted: {updated_count} records")
         if failed_count > 0:
-            print(f" Failed to encrypt: {failed_count} records")
+            print(f"❌ Failed to encrypt: {failed_count} records")
 
         print("\n3. Verifying encryption...")
 
@@ -179,29 +179,29 @@ async def encrypt_existing_secrets():
                         # Try to decrypt each field
                         if encrypted_record.get('tenant_id'):
                             decrypted_tenant = decrypt_client_secret(encrypted_record['tenant_id'])
-                            print(f"tenant_id decryption PASSED (length: {len(decrypted_tenant)})")
+                            print(f"✅ tenant_id decryption PASSED (length: {len(decrypted_tenant)})")
 
                         if encrypted_record.get('client_id'):
                             decrypted_client = decrypt_client_secret(encrypted_record['client_id'])
-                            print(f"client_id decryption PASSED (length: {len(decrypted_client)})")
+                            print(f"✅ client_id decryption PASSED (length: {len(decrypted_client)})")
 
                         if encrypted_record.get('client_secret'):
                             decrypted_secret = decrypt_client_secret(encrypted_record['client_secret'])
-                            print(f"client_secret decryption PASSED (length: {len(decrypted_secret)})")
+                            print(f"✅ client_secret decryption PASSED (length: {len(decrypted_secret)})")
 
-                        print("\nALL DECRYPTION TESTS PASSED!")
+                        print("\n✅ ALL DECRYPTION TESTS PASSED!")
                     except Exception as e:
-                        print(f"decryption test FAILED: {str(e)}")
+                        print(f"❌ Decryption test FAILED: {str(e)}")
                 else:
-                    print(" Could not fetch record for verification")
+                    print("❌ Could not fetch record for verification")
 
-        print("\n Your m365_credentials table is now encrypted!")
+        print("\n🚀 Your m365_credentials table is now encrypted!")
         print("\nNext steps:")
         print("1. Update supabase_services.py to use m365_credentials table")
         print("2. Test your endpoints with the new encrypted credentials")
 
     except Exception as e:
-        print(f"Script error: {str(e)}")
+        print(f"❌ Script error: {str(e)}")
         import traceback
         traceback.print_exc()
 
