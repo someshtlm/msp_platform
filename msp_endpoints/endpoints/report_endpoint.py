@@ -267,11 +267,11 @@ async def generate_security_report_json_endpoint(
                     "NinjaOne": {
                         "charts": {
                             "patch_management_enablement": {
-                                "enabled": 81,
-                                "disabled": 1
+                                "enabled": 35,
+                                "disabled": 3
                             },
                             "patch_status_distribution": {
-                                "installed": 651,
+                                "installed": 201,
                                 "approved": 36,
                                 "failed": 2,
                                 "pending": 5
@@ -1216,21 +1216,21 @@ async def generate_security_report_json_endpoint(
                         "charts": {
                             "asset_type_distribution": {
                                 "live_count": {
-                                    "discovered": 110,
-                                    "other_asset": 83,
-                                    "unknown": 4
+                                    "discovered": 25,
+                                    "other_asset": 12,
+                                    "unknown": 1
                                 },
                                 "monthly_count": {
                                     "discovered": 6,
-                                    "other_asset": 25,
+                                    "other_asset": 2,
                                     "unknown": 1
                                 }
                             },
                             "operating_system_distribution": {
                                 "live_count": {
-                                    "Windows": 24,
-                                    "Linux": 10,
-                                    "Others": 4
+                                    "Windows": 29,
+                                    "Linux": 1,
+                                    "Others": 8
                                 },
                                 "monthly_count": {
                                     "Others": 2,
@@ -1275,8 +1275,8 @@ async def generate_security_report_json_endpoint(
                     "Bitdefender": {
                     "charts": {
                         "endpoint_utilization_bitdefender": {
-                            "activeEndpoints": 80,
-                            "managedEndpoints": 82
+                            "activeEndpoints": 36,
+                            "managedEndpoints": 38
                         },
                         "riskScore_bitdefender" : {
                                 "value": "50%",
