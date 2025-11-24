@@ -179,6 +179,40 @@ from security_reporting_system.src.utils.frontend_transformer import FrontendTra
 
 # Add this new endpoint after the existing GenerateSecurityReport endpoint
 
+def get_organization_name(org_id: int) -> str:
+    """
+    Helper function to fetch organization name from Supabase.
+
+    Args:
+        org_id: Organization ID from organizations table
+
+    Returns:
+        Organization name string, or "Unknown Organization" if not found
+    """
+    try:
+        from supabase import create_client
+
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        supabase = create_client(supabase_url, supabase_key)
+
+        response = supabase.table('organizations')\
+            .select('organization_name')\
+            .eq('id', org_id)\
+            .limit(1)\
+            .execute()
+
+        if response.data and len(response.data) > 0:
+            return response.data[0]['organization_name']
+        else:
+            logger.warning(f"No organization found for org_id: {org_id}")
+            return "Unknown Organization"
+
+    except Exception as e:
+        logger.error(f"Error fetching organization name for org_id {org_id}: {e}")
+        return "Unknown Organization"
+
+
 @router.get("/GenerateSecurityReportJSON/{user_id}/{org_id}", response_model=GraphApiResponse,
             summary="Generate Security Assessment Report JSON")
 async def generate_security_report_json_endpoint(
@@ -216,10 +250,15 @@ async def generate_security_report_json_endpoint(
         demo_user_id = os.getenv("DEMO_USER_ID", "")
         if demo_user_id and user_id == demo_user_id:
             logger.info(f"Returning hardcoded demo data for user_id: {user_id}")
+
+            # Fetch organization name dynamically based on org_id
+            organization_name = get_organization_name(org_id)
+            logger.info(f"Fetched organization name: {organization_name} for org_id: {org_id}")
+
             demo_data = {
                     "organization": {
-                        "id": "41",
-                        "name": "Crimson Retail",
+                        "id": str(org_id),
+                        "name": organization_name,
                         "report_date": "2025-10-09T19:05:15.407535",
                         "created_by": "Security Reporting System",
                         "company": "Innovate Tech Partners",
@@ -659,11 +698,13 @@ async def generate_security_report_json_endpoint(
                           },
                     "Proofpoint": {
                             "charts": {
-                              "threat_by_org_pp": [
-                                { "organization": "TechCorp", "spam": 8900, "virus": 450, "phishing": 820 },
-                                { "organization": "Global Finance", "spam": 6200, "virus": 320, "phishing": 640 },
-                                { "organization": "Healthcare", "spam": 4800, "virus": 280, "phishing": 510 }
-                              ],
+                                "threat_type_pp": {
+                                    "spam": 890,
+                                    "virus": 475,
+                                    "phishing": 820,
+                                    "malicious_attachment": 340,
+                                    "imposter": 180
+                                },
                               "traffic_direction_comparison_pp": [
                                 { "category": "Clean", "inbound": 12500, "outbound": 11800 },
                                 { "category": "Spam", "inbound": 8900, "outbound": 1200 },
@@ -671,13 +712,6 @@ async def generate_security_report_json_endpoint(
                                 { "category": "Fraud", "inbound": 320, "outbound": 45 },
                                 { "category": "Blacklist", "inbound": 680, "outbound": 120 }
                               ],
-                              "top_orgs_by_inbound_volume_pp": {
-                                "TechCorp Industries": 58200,
-                                "Global Finance Ltd": 41500,
-                                "Healthcare Systems": 32800,
-                                "Manufacturing Co": 24100,
-                                "Retail Solutions": 18900
-                              },
                               "inbound_mail_composition_pp": {
                                 "clean": 1500,
                                 "spam": 5200,
