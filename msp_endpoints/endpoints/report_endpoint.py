@@ -276,21 +276,6 @@ async def generate_security_report_json_endpoint(
                                 "failed": 2,
                                 "pending": 5
                             },
-                            "agent_type_distribution": {
-                                "total_agents": 82,
-                                "breakdown": [
-                                    {
-                                        "agent_type": "LIGHTWEIGHT",
-                                        "count": 81,
-                                        "percentage": 98.8
-                                    },
-                                    {
-                                        "agent_type": "PROBE",
-                                        "count": 1,
-                                        "percentage": 1.2
-                                    }
-                                ]
-                            },
                             "patch_management": {
                                 "os_patches": {
                                     "summary": {
@@ -319,79 +304,586 @@ async def generate_security_report_json_endpoint(
                         },
                         "tables": {
                             "device_inventory": [
-                                {
-                                    "device": "CR036",
-                                    "lastLoggedInUser": "emily",
-                                    "manufacturer": "Dell Inc.",
-                                    "model": "Latitude 5520",
-                                    "os": "Windows 11 Professional Edition",
-                                    "ram": "31.7GB",
-                                    "cpu": "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
-                                    "total_storage": "474.1GB",
-                                    "free_storage": "315.9GB",
-                                    "age": "2.2 years",
-                                    "age_category": "<4 years",
-                                    "location": "SOLA"
-                                },
-                                {
-                                    "device": "CR038",
-                                    "lastLoggedInUser": "john",
-                                    "manufacturer": "Dell Inc.",
-                                    "model": "Latitude 5320",
-                                    "os": "Windows 11 Professional Edition",
-                                    "ram": "15.8GB",
-                                    "cpu": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
-                                    "total_storage": "235.8GB",
-                                    "free_storage": "35.7GB",
-                                    "age": "2.2 years",
-                                    "age_category": "<4 years",
-                                    "location": "Capetown"
-                                },
-                                {
-                                    "device": "CR106",
-                                    "lastLoggedInUser": "jane",
-                                    "manufacturer": "Alienware",
-                                    "model": "Alienware x17 R2",
-                                    "os": "Windows 11 Professional Edition",
-                                    "ram": "31.7GB",
-                                    "cpu": "12th Gen Intel(R) Core(TM) i9-12900HK",
-                                    "total_storage": "1905.7GB",
-                                    "free_storage": "967.1GB",
-                                    "age": "1.5 years",
-                                    "age_category": "<4 years",
-                                    "location": "Texas"
-                                },
-                                {
-                                    "device": "CR76976",
-                                    "lastLoggedInUser": "alen",
-                                    "manufacturer": "Dell Inc.",
-                                    "model": "Latitude 3550",
-                                    "os": "Windows 11 Professional Edition",
-                                    "ram": "31.7GB",
-                                    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
-                                    "total_storage": "473.8GB",
-                                    "free_storage": "320.0GB",
-                                    "age": "1.3 years",
-                                    "age_category": "<4 years",
-                                    "location": "Capetown"
-                                }
-                            ],
+                                            {
+                                                "device": "CR036",
+                                                "lastLoggedInUser": "emily",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 5520",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
+                                                "total_storage": "474.1GB",
+                                                "free_storage": "315.9GB",
+                                                "age": "2.2 years",
+                                                "age_category": "<4 years",
+                                                "location": "SOLA"
+                                            },
+                                            {
+                                                "device": "CR038",
+                                                "lastLoggedInUser": "john",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 5320",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "15.8GB",
+                                                "cpu": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+                                                "total_storage": "235.8GB",
+                                                "free_storage": "35.7GB",
+                                                "age": "2.2 years",
+                                                "age_category": "<4 years",
+                                                "location": "Capetown"
+                                            },
+                                            {
+                                                "device": "CR106",
+                                                "lastLoggedInUser": "jane",
+                                                "manufacturer": "Alienware",
+                                                "model": "Alienware x17 R2",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "12th Gen Intel(R) Core(TM) i9-12900HK",
+                                                "total_storage": "1905.7GB",
+                                                "free_storage": "967.1GB",
+                                                "age": "1.5 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR76976",
+                                                "lastLoggedInUser": "alen",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 3550",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+                                                "total_storage": "473.8GB",
+                                                "free_storage": "320.0GB",
+                                                "age": "1.3 years",
+                                                "age_category": "<4 years",
+                                                "location": "Capetown"
+                                            },
+                                            {
+                                                "device": "CR201",
+                                                "lastLoggedInUser": "michael",
+                                                "manufacturer": "HP",
+                                                "model": "EliteBook 850 G8",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "15.8GB",
+                                                "cpu": "Intel Core i5-1145G7",
+                                                "total_storage": "512GB",
+                                                "free_storage": "210GB",
+                                                "age": "3.1 years",
+                                                "age_category": "<4 years",
+                                                "location": "New York"
+                                            },
+                                            {
+                                                "device": "CR202",
+                                                "lastLoggedInUser": "sophia",
+                                                "manufacturer": "Lenovo",
+                                                "model": "ThinkPad X1 Carbon Gen 9",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "Intel Core i7-1185G7",
+                                                "total_storage": "1TB",
+                                                "free_storage": "640GB",
+                                                "age": "2.7 years",
+                                                "age_category": "<4 years",
+                                                "location": "Berlin"
+                                            },
+                                            {
+                                                "device": "CR203",
+                                                "lastLoggedInUser": "daniel",
+                                                "manufacturer": "Apple",
+                                                "model": "MacBook Pro 14 M1",
+                                                "os": "macOS Ventura",
+                                                "ram": "16GB",
+                                                "cpu": "Apple M1 Pro",
+                                                "total_storage": "512GB",
+                                                "free_storage": "289GB",
+                                                "age": "1.1 years",
+                                                "age_category": "<4 years",
+                                                "location": "California"
+                                            },
+                                            {
+                                                "device": "CR204",
+                                                "lastLoggedInUser": "amy",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "XPS 13 9310",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "15.8GB",
+                                                "cpu": "Intel Core i7-1165G7",
+                                                "total_storage": "512GB",
+                                                "free_storage": "310GB",
+                                                "age": "2.0 years",
+                                                "age_category": "<4 years",
+                                                "location": "Capetown"
+                                            },
+                                            {
+                                                "device": "CR205",
+                                                "lastLoggedInUser": "harry",
+                                                "manufacturer": "Asus",
+                                                "model": "ZenBook UX425",
+                                                "os": "Windows 11 Home",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i5-1135G7",
+                                                "total_storage": "256GB",
+                                                "free_storage": "80GB",
+                                                "age": "3.4 years",
+                                                "age_category": "<4 years",
+                                                "location": "London"
+                                            },
+                                            {
+                                                "device": "CR206",
+                                                "lastLoggedInUser": "kelly",
+                                                "manufacturer": "Lenovo",
+                                                "model": "ThinkPad T14 Gen 3",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "Intel Core i7-1260P",
+                                                "total_storage": "512GB",
+                                                "free_storage": "400GB",
+                                                "age": "0.9 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR207",
+                                                "lastLoggedInUser": "leon",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 5540",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "Intel Core i7-1355U",
+                                                "total_storage": "1TB",
+                                                "free_storage": "785GB",
+                                                "age": "0.7 years",
+                                                "age_category": "<4 years",
+                                                "location": "SOLA"
+                                            },
+                                            {
+                                                "device": "CR208",
+                                                "lastLoggedInUser": "peter",
+                                                "manufacturer": "HP",
+                                                "model": "ProBook 650 G8",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i5-1135G7",
+                                                "total_storage": "256GB",
+                                                "free_storage": "120GB",
+                                                "age": "3.0 years",
+                                                "age_category": "<4 years",
+                                                "location": "Mumbai"
+                                            },
+                                            {
+                                                "device": "CR209",
+                                                "lastLoggedInUser": "ella",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 7430",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "31.7GB",
+                                                "cpu": "Intel Core i7-1265U",
+                                                "total_storage": "512GB",
+                                                "free_storage": "270GB",
+                                                "age": "1.6 years",
+                                                "age_category": "<4 years",
+                                                "location": "Berlin"
+                                            },
+                                            {
+                                                "device": "CR210",
+                                                "lastLoggedInUser": "steve",
+                                                "manufacturer": "Apple",
+                                                "model": "MacBook Air M2",
+                                                "os": "macOS Sonoma",
+                                                "ram": "16GB",
+                                                "cpu": "Apple M2",
+                                                "total_storage": "512GB",
+                                                "free_storage": "390GB",
+                                                "age": "1.0 years",
+                                                "age_category": "<4 years",
+                                                "location": "London"
+                                            },
+
+                                            {
+                                                "device": "CR211",
+                                                "lastLoggedInUser": "bruce",
+                                                "manufacturer": "HP",
+                                                "model": "EliteBook 840 G7",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i5-10210U",
+                                                "total_storage": "256GB",
+                                                "free_storage": "90GB",
+                                                "age": "3.8 years",
+                                                "age_category": "<4 years",
+                                                "location": "Canada"
+                                            },
+                                            {
+                                                "device": "CR212",
+                                                "lastLoggedInUser": "tony",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Precision 5570",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "64GB",
+                                                "cpu": "Intel Core i9-12900H",
+                                                "total_storage": "2TB",
+                                                "free_storage": "1.4TB",
+                                                "age": "1.3 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR213",
+                                                "lastLoggedInUser": "nina",
+                                                "manufacturer": "Lenovo",
+                                                "model": "ThinkPad L15",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "15.8GB",
+                                                "cpu": "Intel Core i5-1135G7",
+                                                "total_storage": "256GB",
+                                                "free_storage": "110GB",
+                                                "age": "2.9 years",
+                                                "age_category": "<4 years",
+                                                "location": "California"
+                                            },
+                                            {
+                                                "device": "CR214",
+                                                "lastLoggedInUser": "ryan",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 3420",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i3-1115G4",
+                                                "total_storage": "128GB",
+                                                "free_storage": "50GB",
+                                                "age": "3.3 years",
+                                                "age_category": "<4 years",
+                                                "location": "Mumbai"
+                                            },
+                                            {
+                                                "device": "CR215",
+                                                "lastLoggedInUser": "olivia",
+                                                "manufacturer": "HP",
+                                                "model": "ProBook 440 G9",
+                                                "os": "Windows 11 Home",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i3-1215U",
+                                                "total_storage": "256GB",
+                                                "free_storage": "170GB",
+                                                "age": "1.1 years",
+                                                "age_category": "<4 years",
+                                                "location": "New York"
+                                            },
+                                            {
+                                                "device": "CR216",
+                                                "lastLoggedInUser": "sam",
+                                                "manufacturer": "Asus",
+                                                "model": "VivoBook S14",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i5-1240P",
+                                                "total_storage": "512GB",
+                                                "free_storage": "350GB",
+                                                "age": "1.5 years",
+                                                "age_category": "<4 years",
+                                                "location": "Berlin"
+                                            },
+                                            {
+                                                "device": "CR217",
+                                                "lastLoggedInUser": "alex",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "XPS 15 9520",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "32GB",
+                                                "cpu": "Intel Core i7-12700H",
+                                                "total_storage": "1TB",
+                                                "free_storage": "760GB",
+                                                "age": "1.2 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR218",
+                                                "lastLoggedInUser": "grace",
+                                                "manufacturer": "HP",
+                                                "model": "Spectre x360 14",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i7-1165G7",
+                                                "total_storage": "512GB",
+                                                "free_storage": "390GB",
+                                                "age": "2.0 years",
+                                                "age_category": "<4 years",
+                                                "location": "SOLA"
+                                            },
+
+                                            {
+                                                "device": "CR219",
+                                                "lastLoggedInUser": "richard",
+                                                "manufacturer": "Lenovo",
+                                                "model": "IdeaPad Slim 7",
+                                                "os": "Windows 11 Home",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i5-1035G1",
+                                                "total_storage": "512GB",
+                                                "free_storage": "200GB",
+                                                "age": "3.6 years",
+                                                "age_category": "<4 years",
+                                                "location": "Capetown"
+                                            },
+                                            {
+                                                "device": "CR220",
+                                                "lastLoggedInUser": "sara",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 7410",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i7-10610U",
+                                                "total_storage": "512GB",
+                                                "free_storage": "278GB",
+                                                "age": "2.4 years",
+                                                "age_category": "<4 years",
+                                                "location": "New York"
+                                            },
+                                            {
+                                                "device": "CR221",
+                                                "lastLoggedInUser": "derek",
+                                                "manufacturer": "HP",
+                                                "model": "Elite Dragonfly G2",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i7-1165G7",
+                                                "total_storage": "256GB",
+                                                "free_storage": "140GB",
+                                                "age": "1.9 years",
+                                                "age_category": "<4 years",
+                                                "location": "Berlin"
+                                            },
+                                            {
+                                                "device": "CR222",
+                                                "lastLoggedInUser": "walter",
+                                                "manufacturer": "Acer",
+                                                "model": "Swift 5",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i5-1135G7",
+                                                "total_storage": "512GB",
+                                                "free_storage": "330GB",
+                                                "age": "2.8 years",
+                                                "age_category": "<4 years",
+                                                "location": "London"
+                                            },
+                                            {
+                                                "device": "CR223",
+                                                "lastLoggedInUser": "vicky",
+                                                "manufacturer": "HP",
+                                                "model": "Envy 15",
+                                                "os": "Windows 11 Home",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i7-10750H",
+                                                "total_storage": "1TB",
+                                                "free_storage": "700GB",
+                                                "age": "3.0 years",
+                                                "age_category": "<4 years",
+                                                "location": "California"
+                                            },
+                                            {
+                                                "device": "CR224",
+                                                "lastLoggedInUser": "maria",
+                                                "manufacturer": "Lenovo",
+                                                "model": "ThinkPad P1 Gen 4",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "32GB",
+                                                "cpu": "Intel Core i7-11850H",
+                                                "total_storage": "1TB",
+                                                "free_storage": "850GB",
+                                                "age": "1.1 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR225",
+                                                "lastLoggedInUser": "andrew",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 3330",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i3-1115G4",
+                                                "total_storage": "256GB",
+                                                "free_storage": "150GB",
+                                                "age": "2.5 years",
+                                                "age_category": "<4 years",
+                                                "location": "Mumbai"
+                                            },
+                                            {
+                                                "device": "CR226",
+                                                "lastLoggedInUser": "karen",
+                                                "manufacturer": "HP",
+                                                "model": "Omen 16",
+                                                "os": "Windows 11 Home",
+                                                "ram": "32GB",
+                                                "cpu": "Intel Core i7-12700H",
+                                                "total_storage": "1TB",
+                                                "free_storage": "600GB",
+                                                "age": "1.3 years",
+                                                "age_category": "<4 years",
+                                                "location": "SOLA"
+                                            },
+                                            {
+                                                "device": "CR227",
+                                                "lastLoggedInUser": "louis",
+                                                "manufacturer": "Acer",
+                                                "model": "Aspire 5",
+                                                "os": "Windows 11 Home",
+                                                "ram": "8GB",
+                                                "cpu": "Intel Core i3-1215U",
+                                                "total_storage": "256GB",
+                                                "free_storage": "165GB",
+                                                "age": "2.2 years",
+                                                "age_category": "<4 years",
+                                                "location": "Capetown"
+                                            },
+                                            {
+                                                "device": "CR228",
+                                                "lastLoggedInUser": "irene",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Precision 3480",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "32GB",
+                                                "cpu": "Intel Core i7-13800H",
+                                                "total_storage": "1TB",
+                                                "free_storage": "790GB",
+                                                "age": "0.8 years",
+                                                "age_category": "<4 years",
+                                                "location": "London"
+                                            },
+                                            {
+                                                "device": "CR229",
+                                                "lastLoggedInUser": "shawn",
+                                                "manufacturer": "Lenovo",
+                                                "model": "ThinkPad X13",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i5-1135G7",
+                                                "total_storage": "256GB",
+                                                "free_storage": "180GB",
+                                                "age": "3.2 years",
+                                                "age_category": "<4 years",
+                                                "location": "California"
+                                            },
+                                            {
+                                                "device": "CR230",
+                                                "lastLoggedInUser": "simon",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 7430 2-in-1",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "32GB",
+                                                "cpu": "Intel Core i7-1280P",
+                                                "total_storage": "1TB",
+                                                "free_storage": "820GB",
+                                                "age": "1.4 years",
+                                                "age_category": "<4 years",
+                                                "location": "New York"
+                                            },
+                                            {
+                                                "device": "CR231",
+                                                "lastLoggedInUser": "noah",
+                                                "manufacturer": "HP",
+                                                "model": "EliteBook 830 G9",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i5-1250P",
+                                                "total_storage": "512GB",
+                                                "free_storage": "390GB",
+                                                "age": "0.7 years",
+                                                "age_category": "<4 years",
+                                                "location": "Berlin"
+                                            },
+                                            {
+                                                "device": "CR232",
+                                                "lastLoggedInUser": "ruby",
+                                                "manufacturer": "Asus",
+                                                "model": "ROG Strix G15",
+                                                "os": "Windows 11 Home",
+                                                "ram": "32GB",
+                                                "cpu": "AMD Ryzen 9 5900HX",
+                                                "total_storage": "1TB",
+                                                "free_storage": "620GB",
+                                                "age": "1.9 years",
+                                                "age_category": "<4 years",
+                                                "location": "Texas"
+                                            },
+                                            {
+                                                "device": "CR233",
+                                                "lastLoggedInUser": "mark",
+                                                "manufacturer": "Dell Inc.",
+                                                "model": "Latitude 5540",
+                                                "os": "Windows 11 Professional Edition",
+                                                "ram": "16GB",
+                                                "cpu": "Intel Core i5-1335U",
+                                                "total_storage": "512GB",
+                                                "free_storage": "410GB",
+                                                "age": "0.6 years",
+                                                "age_category": "<4 years",
+                                                "location": "SOLA"
+                                            }
+                                        ],
                             "device_inventory_server": [
-                                {
-                                    "device": "CR-7",
-                                    "lastLoggedInUser": "network",
-                                    "manufacturer": "Microsoft Corporation",
-                                    "model": "Virtual Machine",
-                                    "os": "Windows Server 2016 Standard Edition",
-                                    "ram": "11.6GB",
-                                    "cpu": "Intel(R) Xeon(R) Silver 4114 CPU @ 2.20GHz",
-                                    "total_storage": "4523.3GB",
-                                    "free_storage": "1087.7GB",
-                                    "age": "2.2 years",
-                                    "age_category": "<4 years",
-                                    "location": "Wall street"
-                                }
-                            ]
+                    {
+                        "device": "CR-7",
+                        "lastLoggedInUser": "network",
+                        "manufacturer": "Microsoft Corporation",
+                        "model": "Virtual Machine",
+                        "os": "Windows Server 2016 Standard Edition",
+                        "ram": "11.6GB",
+                        "cpu": "Intel(R) Xeon(R) Silver 4114 CPU @ 2.20GHz",
+                        "total_storage": "4523.3GB",
+                        "free_storage": "1087.7GB",
+                        "age": "2.2 years",
+                        "age_category": "<4 years",
+                        "location": "Wall street"
+                    },
+                    {
+                        "device": "CR-12",
+                        "lastLoggedInUser": "system-admin",
+                        "manufacturer": "Dell Inc.",
+                        "model": "PowerEdge R740",
+                        "os": "Windows Server 2019 Datacenter Edition",
+                        "ram": "63.9GB",
+                        "cpu": "Intel(R) Xeon(R) Gold 5218R CPU @ 2.10GHz",
+                        "total_storage": "8192GB",
+                        "free_storage": "4021GB",
+                        "age": "1.8 years",
+                        "age_category": "<4 years",
+                        "location": "New Jersey"
+                    },
+                    {
+                        "device": "CR-18",
+                        "lastLoggedInUser": "root",
+                        "manufacturer": "Hewlett-Packard",
+                        "model": "ProLiant DL380 Gen10",
+                        "os": "Ubuntu Server 22.04 LTS",
+                        "ram": "127.8GB",
+                        "cpu": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz",
+                        "total_storage": "10240GB",
+                        "free_storage": "6850GB",
+                        "age": "3.4 years",
+                        "age_category": "<4 years",
+                        "location": "Wall street"
+                    },
+                    {
+                        "device": "CR-25",
+                        "lastLoggedInUser": "automation",
+                        "manufacturer": "VMware",
+                        "model": "ESXi Virtual Machine",
+                        "os": "Windows Server 2022 Standard Edition",
+                        "ram": "31.7GB",
+                        "cpu": "Intel(R) Xeon(R) Gold 6230 CPU @ 2.10GHz",
+                        "total_storage": "6144GB",
+                        "free_storage": "2980GB",
+                        "age": "0.9 years",
+                        "age_category": "<4 years",
+                        "location": "Frankfurt"
+                    }
+              ]
+
                         }
                     },
                     "Autotask": {
@@ -676,17 +1168,17 @@ async def generate_security_report_json_endpoint(
                     "Cove": {
                         "charts": {
                             "total_devices_storage_summary_cove": {
-                              "totalDevices": 10,
+                              "totalDevices": 38,
                               "totalStorage": 4.30
                             },
                             "asset_type_distribution_cove": {
-                              "workstations": 7,
-                              "servers": 3,
+                              "workstations": 34,
+                              "servers": 4,
                               "others": 0
                             },
                             "devices_distribution_cove": {
-                              "physical": 7,
-                              "virtual": 3,
+                              "physical": 28,
+                              "virtual": 10,
                               "others": 0
                             },
                             "retention_policy_distribution_cove": {
@@ -706,17 +1198,17 @@ async def generate_security_report_json_endpoint(
                                     "imposter": 180
                                 },
                               "traffic_direction_comparison_pp": [
-                                { "category": "Clean", "inbound": 12500, "outbound": 11800 },
-                                { "category": "Spam", "inbound": 8900, "outbound": 1200 },
+                                { "category": "Clean", "inbound": 1250, "outbound": 1180 },
+                                { "category": "Spam", "inbound": 900, "outbound": 1200 },
                                 { "category": "Virus", "inbound": 450, "outbound": 85 },
                                 { "category": "Fraud", "inbound": 320, "outbound": 45 },
                                 { "category": "Blacklist", "inbound": 680, "outbound": 120 }
                               ],
                               "inbound_mail_composition_pp": {
-                                "clean": 1500,
-                                "spam": 5200,
-                                "virus": 1850,
-                                "fraud": 720
+                                "clean": 150,
+                                "spam": 520,
+                                "virus": 185,
+                                "fraud": 212
                               }
                             }
                           },
@@ -736,13 +1228,13 @@ async def generate_security_report_json_endpoint(
                             },
                             "operating_system_distribution": {
                                 "live_count": {
-                                    "Windows": 80,
-                                    "Linux": 2,
-                                    "Others": 29
+                                    "Windows": 24,
+                                    "Linux": 10,
+                                    "Others": 4
                                 },
                                 "monthly_count": {
-                                    "Others": 27,
-                                    "Windows": 13
+                                    "Others": 2,
+                                    "Windows": 6
                                 }
                             },
                             "security_risk_score": {
@@ -750,17 +1242,17 @@ async def generate_security_report_json_endpoint(
                                 "monthly_count": 2.17
                             },
                             "agent_type_distribution": {
-                                "total_agents": 82,
+                                "total_agents": 38,
                                 "breakdown": [
                                     {
                                         "agent_type": "LIGHTWEIGHT",
-                                        "count": 81,
-                                        "percentage": 98.8
+                                        "count": 27,
+                                        "percentage": 71.1
                                     },
                                     {
                                         "agent_type": "PROBE",
-                                        "count": 1,
-                                        "percentage": 1.2
+                                        "count": 11,
+                                        "percentage": 28.9
                                     }
                                 ]
                             },
@@ -795,14 +1287,14 @@ async def generate_security_report_json_endpoint(
                                 "industryModifier": "0%"},
                      "inventory_summary_bitdefender": {
                             "summary": {
-                                "windowsWorkstations": 82,
-                                "windowsServers": 1,
+                                "windowsWorkstations": 34,
+                                "windowsServers": 4,
                                 "macOS": 0,
                                 "linux": 0
                             },
                             "count": {
-                                "physicalMachines": 82,
-                                "virtualMachines": 1
+                                "physicalMachines": 28,
+                                "virtualMachines": 10
                             }
                         }
             },
