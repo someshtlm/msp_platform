@@ -991,12 +991,12 @@ async def generate_security_report_json_endpoint(
                                 "email": 15,
                                 "user_access": 18,
                                 "application_software": 16,
-                                "server": 1,
+                                "server": 4,
                                 "network_internet": 5,
-                                "printer_scanner": 2,
-                                "shared_drive": 5,
+                                "printer_scanner": 3,
+                                "shared_drive": 25,
                                 "cybersecurity": 3,
-                                "other": 14
+                                "other": 20
                             },
                             "open_ticket_priority_distribution": {
                                 "critical": 2,
@@ -1104,14 +1104,14 @@ async def generate_security_report_json_endpoint(
                                 "tickets_by_contact_summary": {
                                     "contacts_summary": {
                                         "contacts_count": 22,
-                                        "total_tickets": 111,
+                                        "total_tickets": 128,
                                         "top_contact": "Emily Gupton"
                                     }
                                 },
                                 "data": [
                                     {
                                         "name": "L. Gupton",
-                                        "tickets": 42
+                                        "tickets": 49
                                     },
                                     {
                                         "name": "Automation Sheets",
@@ -1119,7 +1119,7 @@ async def generate_security_report_json_endpoint(
                                     },
                                     {
                                         "name": "Other",
-                                        "tickets": 10
+                                        "tickets": 20
                                     },
                                     {
                                         "name": "TLIT unknown",
@@ -1234,7 +1234,7 @@ async def generate_security_report_json_endpoint(
                                 },
                                 "monthly_count": {
                                     "Others": 2,
-                                    "Windows": 6
+                                    "Windows": 5
                                 }
                             },
                             "security_risk_score": {
@@ -1287,10 +1287,10 @@ async def generate_security_report_json_endpoint(
                                 "industryModifier": "0%"},
                      "inventory_summary_bitdefender": {
                             "summary": {
-                                "windowsWorkstations": 34,
+                                "windowsWorkstations": 33,
                                 "windowsServers": 4,
                                 "macOS": 0,
-                                "linux": 0
+                                "linux": 1
                             },
                             "count": {
                                 "physicalMachines": 28,
