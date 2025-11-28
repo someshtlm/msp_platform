@@ -405,29 +405,28 @@ async def edit_client(
                 logger.error(f"Failed to update credentials for org_id {org_id}: {str(e)}")
                 # Don't fail the entire operation
 
-        # Step 3: Update POCs if provided
+        # Step 3: Update POCs if provided (delete old ones and insert new ones)
         pocs_updated = 0
-        if request.pocs_list is not None:
+        if request.pocs_list is not None and len(request.pocs_list) > 0:
             try:
-                # Delete existing POCs
+                # Delete existing POCs first
                 supabase.table("organization_pocs").delete().eq("organization_id", org_id).execute()
                 logger.info(f"Deleted existing POCs for org_id: {org_id}")
 
                 # Insert new POCs
-                if len(request.pocs_list) > 0:
-                    pocs_data = []
-                    for poc in request.pocs_list:
-                        pocs_data.append({
-                            "organization_id": org_id,
-                            "poc_name": poc.poc_name,
-                            "poc_email": poc.poc_email,
-                            "poc_role": poc.poc_role
-                        })
+                pocs_data = []
+                for poc in request.pocs_list:
+                    pocs_data.append({
+                        "organization_id": org_id,
+                        "poc_name": poc.poc_name,
+                        "poc_email": poc.poc_email,
+                        "poc_role": poc.poc_role
+                    })
 
-                    if pocs_data:
-                        pocs_result = supabase.table("organization_pocs").insert(pocs_data).execute()
-                        pocs_updated = len(pocs_result.data) if pocs_result.data else 0
-                        logger.info(f"Inserted {pocs_updated} new POCs for org_id: {org_id}")
+                if pocs_data:
+                    pocs_result = supabase.table("organization_pocs").insert(pocs_data).execute()
+                    pocs_updated = len(pocs_result.data) if pocs_result.data else 0
+                    logger.info(f"Updated {pocs_updated} POCs for org_id: {org_id}")
 
             except Exception as e:
                 logger.error(f"Failed to update POCs for org_id {org_id}: {str(e)}")
