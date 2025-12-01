@@ -420,7 +420,64 @@ async def write_users_to_cache(org_id: int) -> bool:
 
         users_list = response.data.get('users', [])
 
-        # Step 4: UPSERT each user
+        # Step 4: Track which users are in the API response
+        api_user_ids = [user['UserId'] for user in users_list]
+        logger.info(f"Fetched {len(api_user_ids)} users from API for org_id: {org_id}")
+
+        # Step 5: Get existing users from database for this organization
+        existing_users_response = supabase.table('m365_users')\
+            .select('user_id')\
+            .eq('organization_id', org_id)\
+            .execute()
+
+        existing_user_ids = [user['user_id'] for user in existing_users_response.data] if existing_users_response.data else []
+        logger.info(f"Found {len(existing_user_ids)} existing users in cache for org_id: {org_id}")
+
+        # Step 6: Find users that are in DB but NOT in API (these need to be deleted)
+        users_to_delete = [user_id for user_id in existing_user_ids if user_id not in api_user_ids]
+
+        if users_to_delete:
+            logger.info(f"Deleting {len(users_to_delete)} users that no longer exist in API: {users_to_delete}")
+
+            for user_id in users_to_delete:
+                # Delete in order: devices -> details -> user (child to parent)
+
+                # 1. Delete user devices
+                try:
+                    supabase.table('m365_user_devices')\
+                        .delete()\
+                        .eq('user_id', user_id)\
+                        .execute()
+                    logger.info(f"Deleted devices for user_id: {user_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting devices for user_id {user_id}: {e}")
+
+                # 2. Delete user details
+                try:
+                    supabase.table('m365_user_details')\
+                        .delete()\
+                        .eq('user_id', user_id)\
+                        .execute()
+                    logger.info(f"Deleted details for user_id: {user_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting details for user_id {user_id}: {e}")
+
+                # 3. Delete user record
+                try:
+                    supabase.table('m365_users')\
+                        .delete()\
+                        .eq('user_id', user_id)\
+                        .eq('organization_id', org_id)\
+                        .execute()
+                    logger.info(f"Deleted user record for user_id: {user_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting user record for user_id {user_id}: {e}")
+
+            logger.info(f"Deleted {len(users_to_delete)} removed users and their related data from cache")
+        else:
+            logger.info(f"No users to delete - all cached users still exist in API")
+
+        # Step 7: UPSERT each user from API
         for user in users_list:
             user_db_data = {
                 "organization_id": org_id,
@@ -453,7 +510,7 @@ async def write_users_to_cache(org_id: int) -> bool:
                     .insert(user_db_data)\
                     .execute()
 
-        logger.info(f"✅ Written {len(users_list)} users to cache for org_id: {org_id}")
+        logger.info(f"Written {len(users_list)} users to cache for org_id: {org_id}")
         return True
 
     except Exception as e:
@@ -555,9 +612,42 @@ async def write_user_details_to_cache(user_id: str, org_id: int) -> bool:
                 .insert(user_details_data)\
                 .execute()
 
-        # Step 6: UPSERT devices
+        # Step 6: Track which devices are in the API response
         devices_list = data['devices']['device_list']
+        api_device_ids = [device['device_id'] for device in devices_list]
+        logger.info(f"Fetched {len(api_device_ids)} devices from API for user_id: {user_id}")
 
+        # Step 7: Get existing devices from database for this user
+        existing_devices_response = supabase.table('m365_user_devices')\
+            .select('device_id')\
+            .eq('user_id', user_id)\
+            .execute()
+
+        existing_device_ids = [device['device_id'] for device in existing_devices_response.data] if existing_devices_response.data else []
+        logger.info(f"Found {len(existing_device_ids)} existing devices in cache for user_id: {user_id}")
+
+        # Step 8: Find devices that are in DB but NOT in API (these need to be deleted)
+        devices_to_delete = [device_id for device_id in existing_device_ids if device_id not in api_device_ids]
+
+        if devices_to_delete:
+            logger.info(f"Deleting {len(devices_to_delete)} devices that no longer exist in API: {devices_to_delete}")
+
+            for device_id in devices_to_delete:
+                try:
+                    supabase.table('m365_user_devices')\
+                        .delete()\
+                        .eq('device_id', device_id)\
+                        .eq('user_id', user_id)\
+                        .execute()
+                    logger.info(f"Deleted device_id: {device_id} for user_id: {user_id}")
+                except Exception as e:
+                    logger.warning(f"Error deleting device_id {device_id}: {e}")
+
+            logger.info(f"Deleted {len(devices_to_delete)} removed devices from cache")
+        else:
+            logger.info(f"No devices to delete - all cached devices still exist in API")
+
+        # Step 9: UPSERT devices from API
         for device in devices_list:
             device_db_data = {
                 "user_id": user_id,
@@ -585,7 +675,7 @@ async def write_user_details_to_cache(user_id: str, org_id: int) -> bool:
                     .insert(device_db_data)\
                     .execute()
 
-        logger.info(f"✅ Written user details for user_id: {user_id}, devices: {len(devices_list)}")
+        logger.info(f"Written user details for user_id: {user_id}, devices: {len(devices_list)}")
         return True
 
     except Exception as e:
