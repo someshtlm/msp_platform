@@ -1274,36 +1274,29 @@ class FrontendTransformer:
         if "\\" in user:
             user = user.split("\\")[-1]  # Remove domain prefix like "SKG\"
 
-        # COMMENTED OUT: Age calculation - NinjaOne doesn't provide accurate warranty/purchase dates
-        # The 'created' timestamp only shows when device was added to NinjaOne, not actual device age
-        # TODO: Re-enable once warranty data is imported into NinjaOne
-        # created_timestamp = device.get("created")
-        # age_display = "Unknown"
-        # age_category = "Unknown"
-        # if created_timestamp:
-        #     try:
-        #         created_date = datetime.fromtimestamp(created_timestamp)
-        #         age_years = (datetime.now() - created_date).days / 365.25
-        #
-        #         # Round to 1 decimal place
-        #         age_rounded = round(age_years, 1)
-        #
-        #         # Format age display with proper singular/plural
-        #         if age_rounded == 1.0:
-        #             age_display = "1.0 year"
-        #         else:
-        #             age_display = f"{age_rounded:.1f} years"
-        #
-        #         # Categorize age into ranges
-        #         if age_rounded > 6:
-        #             age_category = ">6 years"
-        #         elif age_rounded >= 4:
-        #             age_category = "4-6 years"
-        #         else:
-        #             age_category = "<4 years"
-        #     except:
-        #         age_display = "Unknown"
-        #         age_category = "Unknown"
+        # Age calculation using warranty.startDate from NinjaOne
+        # Get warranty start date from references.warranty.startDate
+        warranty_start = device.get("references", {}).get("warranty", {}).get("startDate", 0)
+        age_display = "-"
+
+        if warranty_start and warranty_start != 0:
+            try:
+                warranty_start_date = datetime.fromtimestamp(warranty_start)
+                age_years = (datetime.now() - warranty_start_date).days / 365.25
+
+                # Round to 1 decimal place
+                age_rounded = round(age_years, 1)
+
+                # Format age display with proper singular/plural
+                if age_rounded == 1.0:
+                    age_display = "1.0 year"
+                else:
+                    age_display = f"{age_rounded:.1f} years"
+            except:
+                age_display = "-"
+        else:
+            # If warranty.startDate not present or is 0, set age to "-"
+            age_display = "-"
 
         # Calculate free storage from raw data
         free_storage_gb = device.get("free_space_gb", 0)
@@ -1330,8 +1323,7 @@ class FrontendTransformer:
             "cpu": device.get("cpu", "Unknown"),
             "total_storage": f"{device.get('storage_gb', 0):.1f}GB",
             "free_storage": f"{free_storage_gb:.1f}GB",
-            # "age": age_display,  # COMMENTED OUT - waiting for warranty data import
-            # "age_category": age_category,  # COMMENTED OUT - waiting for warranty data import
+            "age": age_display,  # Using warranty.startDate, null if not available
             "location": location
         }
 

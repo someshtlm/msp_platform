@@ -62,7 +62,7 @@ class NinjaOneAPIClient:
         # Organization-specific endpoints - only what we need
         self.endpoints = {
             "devices": f"/v2/devices?df=org={org_id}",
-            "devices_detailed": f"/v2/devices-detailed?df=org={org_id}",
+            "devices_detailed": f"/v2/devices-detailed?df=org={org_id}&expand=warranty",
             "os_patches": f"/v2/queries/os-patches?df=org={org_id}",
             "os_patch_installs": f"/v2/queries/os-patch-installs?df=org={org_id}",
             "software_patch_installs": f"/v2/queries/software-patch-installs?df=org={org_id}",
