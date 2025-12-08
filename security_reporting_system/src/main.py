@@ -557,7 +557,7 @@ async def main() -> None:
     parser.add_argument('--credential-id', type=str, default='4ffdf31a-9ea7-4962-a8ff-4ef440c793f3',
                         help='[DEPRECATED] Credential ID for Supabase lookup. Use --account-id instead.')
     parser.add_argument('--month', type=str,
-                        help='Specific month for report generation (e.g., "August", "July", "June") or "6 months" for Autotask 6-month aggregated data. Defaults to previous month')
+                        help='Specific month for report generation in month_year format (e.g., "november_2024", "december_2024"). Defaults to previous month')
     parser.add_argument('--list-months', action='store_true',
                         help='List available months for report generation and exit')
     parser.add_argument('--test-connections', action='store_true',
@@ -576,9 +576,11 @@ async def main() -> None:
 
         print("\n=== Available Months for Report Generation ===")
         for month in available_months:
-            print(f"  • {month['display_name']} (use --month \"{month['name']}\")")
+            month_lowercase = month['name'].lower()
+            month_year_format = f"{month_lowercase}_{month['year']}"
+            print(f"  • {month['display_name']} (use --month \"{month_year_format}\")")
         print("\nExample usage:")
-        print("  python src/main.py --month \"August\" --output pdf")
+        print("  python src/main.py --month \"november_2024\" --output pdf")
         return
 
     # Handle connection testing
@@ -682,8 +684,24 @@ async def main() -> None:
 
         if args.output == 'frontend':
             logger.info("Generating frontend-optimized JSON...")
+
+            # Convert month parameter to "November 2024" format for reporting_period
+            reporting_period = None
+            if args.month:
+                try:
+                    parts = args.month.split('_')
+                    month_name = parts[0].capitalize()
+                    year = parts[1]
+                    reporting_period = f"{month_name} {year}"
+                except:
+                    pass
+
             transformer = FrontendTransformer()
-            frontend_json = transformer.transform_to_frontend_json(final_output, account_id=args.account_id)
+            frontend_json = transformer.transform_to_frontend_json(
+                final_output,
+                account_id=args.account_id,
+                reporting_period=reporting_period
+            )
 
             frontend_output = json.dumps(frontend_json, indent=2, default=str)
             print(frontend_output)  # Print to console

@@ -51,6 +51,24 @@ CREATE TABLE public.audit_log (
   CONSTRAINT audit_log_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
   CONSTRAINT audit_log_platform_user_id_fkey FOREIGN KEY (platform_user_id) REFERENCES public.platform_users(id)
 );
+CREATE TABLE public.generated_reports (
+  id integer NOT NULL DEFAULT nextval('generated_reports_id_seq'::regclass),
+  organization_id integer NOT NULL,
+  report_month character varying NOT NULL,
+  report_year integer NOT NULL,
+  organization_data jsonb,
+  execution_info jsonb,
+  pdf_file_path character varying,
+  pdf_file_url character varying,
+  pdf_file_size_kb integer,
+  pdf_generated_at timestamp without time zone,
+  status character varying DEFAULT 'completed'::character varying,
+  generated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT generated_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT generated_reports_organization_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
 CREATE TABLE public.integration_credentials (
   id integer NOT NULL DEFAULT nextval('integration_credentials_id_seq'::regclass),
   account_id integer,
@@ -342,4 +360,15 @@ CREATE TABLE public.platform_users (
   CONSTRAINT platform_users_pkey PRIMARY KEY (id),
   CONSTRAINT platform_users_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id),
   CONSTRAINT platform_users_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.report_platform_data (
+  id integer NOT NULL DEFAULT nextval('report_platform_data_id_seq'::regclass),
+  report_id integer NOT NULL,
+  integration_id integer NOT NULL,
+  platform_data jsonb NOT NULL,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT report_platform_data_pkey PRIMARY KEY (id),
+  CONSTRAINT report_platform_data_report_fkey FOREIGN KEY (report_id) REFERENCES public.generated_reports(id),
+  CONSTRAINT report_platform_data_integration_fkey FOREIGN KEY (integration_id) REFERENCES public.integrations(id)
 );

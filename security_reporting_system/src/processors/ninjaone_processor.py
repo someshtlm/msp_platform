@@ -127,7 +127,7 @@ class NinjaOneProcessor:
 
         Args:
             use_time_filter: Whether to apply time filtering for historical data
-            month_name: Specific month name (e.g., "August", "July") - user selects from last 3 months available
+            month_name: Month in 'month_year' format (e.g., "november_2024", "december_2024")
         """
         data = {}
 
@@ -373,8 +373,11 @@ class NinjaOneProcessor:
             location_id = device.get("locationId")
             location_name = location_mapping.get(location_id, "Unknown")
 
+            # Use displayName if available and not empty, otherwise fallback to systemName
+            device_name = device.get("displayName") or device.get("systemName", "")
+
             formatted_device = {
-                "workstation": device.get("systemName", ""),
+                "workstation": device_name,
                 "user": device.get("lastLoggedInUser", ""),
                 "make": device.get("system", {}).get("manufacturer", ""),
                 "serial": device.get("system", {}).get("serialNumber", ""),
@@ -386,7 +389,8 @@ class NinjaOneProcessor:
                 "free_space_gb": 0,
                 "created": device.get("created"),
                 "nodeClass": node_class,  # Keep nodeClass for debugging if needed
-                "location": location_name
+                "location": location_name,
+                "references": device.get("references", {})  # Include warranty data for age calculation
             }
 
             processors = device.get("processors", [])
@@ -525,7 +529,8 @@ class NinjaOneProcessor:
             if devices:
                 for d in devices:
                     if d.get('id') == device_id:
-                        return d.get('systemName', f"Device{device_id}")
+                        # Use displayName if available, otherwise fallback to systemName
+                        return d.get('displayName') or d.get('systemName', f"Device{device_id}")
             return f"Device{device_id}"
 
         top_devices = []

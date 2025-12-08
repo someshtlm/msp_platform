@@ -151,8 +151,8 @@ async def get_available_report_months():
                 "available_months": months_list,
                 "count": len(months_list),
                 "usage_instructions": {
-                    "description": "Use the 'month_name' field when calling the report generation endpoint",
-                    "example": "GET /api/GenerateSecurityReport/41?month=August"
+                    "description": "Use the 'month_key' field when calling the report generation endpoint",
+                    "example": "GET /api/GenerateSecurityReportJSON/{user_id}/{org_id}?month=november_2024"
                 }
             },
             error=None
@@ -168,10 +168,6 @@ async def get_available_report_months():
             },
             error=f"Failed to retrieve available months: {str(e)}"
         )
-
-
-
-
 
 # Add this import at the top with the other imports
 from security_reporting_system.src.utils.frontend_transformer import FrontendTransformer
@@ -219,7 +215,7 @@ async def generate_security_report_json_endpoint(
         user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
         org_id: int = Path(..., description="Organization ID"),
         month: Optional[str] = Query(None,
-                                     description="Report month name (e.g., 'August', 'July', 'June'). If not provided, defaults to previous month.")
+                                     description="Report month in 'month_year' format (e.g., 'november_2024', 'december_2024'). If not provided, defaults to previous month.")
 ):
     """
     Generates a comprehensive security assessment report in JSON format for the specified organization and month.
@@ -232,1192 +228,67 @@ async def generate_security_report_json_endpoint(
     Args:
         user_id: User UUID (auth_user_id) from platform_users table
         org_id: Organization ID (organizations.id)
-        month: Optional month name (August, July, June). Defaults to previous month.
+        month: Optional month in 'month_year' format (e.g., 'november_2024'). Defaults to previous month.
 
     Returns:
         GraphApiResponse: Contains JSON data from frontend transformer
 
     Example Usage:
         - GET /api/GenerateSecurityReportJSON/{uuid}/{org_id} (previous month - default)
-        - GET /api/GenerateSecurityReportJSON/{uuid}/{org_id}?month=August (August 2025)
-        - GET /api/GenerateSecurityReportJSON/{uuid}/{org_id}?month=July (July 2025)
+        - GET /api/GenerateSecurityReportJSON/{uuid}/{org_id}?month=november_2024
+        - GET /api/GenerateSecurityReportJSON/{uuid}/{org_id}?month=december_2024
     """
     try:
         logger.info(
             f"Generating security report JSON for user_id: {user_id}, org_id: {org_id}, month: {month or 'previous_month'}")
 
-        # HARDCODED DEMO DATA FOR SPECIFIC USER
+        # DEMO DATA FOR SPECIFIC USER
         demo_user_id = os.getenv("DEMO_USER_ID", "")
         if demo_user_id and user_id == demo_user_id:
-            logger.info(f"Returning hardcoded demo data for user_id: {user_id}")
+            logger.info(f"Returning demo data from dummy.json for user_id: {user_id}")
 
-            # Fetch organization name dynamically based on org_id
-            organization_name = get_organization_name(org_id)
-            logger.info(f"Fetched organization name: {organization_name} for org_id: {org_id}")
+            # Load demo data from dummy.json file
+            dummy_json_path = os.path.join(os.path.dirname(__file__), 'dummy.json')
 
-            demo_data = {
-                    "organization": {
-                        "id": str(org_id),
-                        "name": organization_name,
-                        "report_date": "2025-10-09T19:05:15.407535",
-                        "created_by": "Security Reporting System",
-                        "company": "Innovate Tech Partners",
-                        "reporting_period": "October 2025"
-                    },
-                    "NinjaOne": {
-                        "charts": {
-                            "patch_management_enablement": {
-                                "enabled": 35,
-                                "disabled": 3
-                            },
-                            "patch_status_distribution": {
-                                "installed": 201,
-                                "approved": 36,
-                                "failed": 2,
-                                "pending": 5
-                            },
-                            "patch_management": {
-                                "os_patches": {
-                                    "summary": {
-                                        "total": 651,
-                                        "successful": 651,
-                                        "failed": 0,
-                                        "success_rate": 100.0
-                                    },
-                                    "failed_devices": []
-                                },
-                                "third_party_patches": {
-                                    "summary": {
-                                        "total": 360,
-                                        "successful": 360,
-                                        "failed": 0,
-                                        "success_rate": 100.0
-                                    },
-                                    "failed_devices": []
-                                }
-                            },
-                            "devices_with_failed_patches": {
-                                "count": 0,
-                                "devices": [],
-                                "message": "No devices with failed patches"
-                            }
-                        },
-                        "tables": {
-                            "device_inventory": [
-                                            {
-                                                "device": "CR036",
-                                                "lastLoggedInUser": "emily",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 5520",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
-                                                "total_storage": "474.1GB",
-                                                "free_storage": "315.9GB",
-                                                "age": "2.2 years",
-                                                "age_category": "<4 years",
-                                                "location": "SOLA"
-                                            },
-                                            {
-                                                "device": "CR038",
-                                                "lastLoggedInUser": "john",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 5320",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "15.8GB",
-                                                "cpu": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
-                                                "total_storage": "235.8GB",
-                                                "free_storage": "35.7GB",
-                                                "age": "2.2 years",
-                                                "age_category": "<4 years",
-                                                "location": "Capetown"
-                                            },
-                                            {
-                                                "device": "CR106",
-                                                "lastLoggedInUser": "jane",
-                                                "manufacturer": "Alienware",
-                                                "model": "Alienware x17 R2",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "12th Gen Intel(R) Core(TM) i9-12900HK",
-                                                "total_storage": "1905.7GB",
-                                                "free_storage": "967.1GB",
-                                                "age": "1.5 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR76976",
-                                                "lastLoggedInUser": "alen",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 3550",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
-                                                "total_storage": "473.8GB",
-                                                "free_storage": "320.0GB",
-                                                "age": "1.3 years",
-                                                "age_category": "<4 years",
-                                                "location": "Capetown"
-                                            },
-                                            {
-                                                "device": "CR201",
-                                                "lastLoggedInUser": "michael",
-                                                "manufacturer": "HP",
-                                                "model": "EliteBook 850 G8",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "15.8GB",
-                                                "cpu": "Intel Core i5-1145G7",
-                                                "total_storage": "512GB",
-                                                "free_storage": "210GB",
-                                                "age": "3.1 years",
-                                                "age_category": "<4 years",
-                                                "location": "New York"
-                                            },
-                                            {
-                                                "device": "CR202",
-                                                "lastLoggedInUser": "sophia",
-                                                "manufacturer": "Lenovo",
-                                                "model": "ThinkPad X1 Carbon Gen 9",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "Intel Core i7-1185G7",
-                                                "total_storage": "1TB",
-                                                "free_storage": "640GB",
-                                                "age": "2.7 years",
-                                                "age_category": "<4 years",
-                                                "location": "Berlin"
-                                            },
-                                            {
-                                                "device": "CR203",
-                                                "lastLoggedInUser": "daniel",
-                                                "manufacturer": "Apple",
-                                                "model": "MacBook Pro 14 M1",
-                                                "os": "macOS Ventura",
-                                                "ram": "16GB",
-                                                "cpu": "Apple M1 Pro",
-                                                "total_storage": "512GB",
-                                                "free_storage": "289GB",
-                                                "age": "1.1 years",
-                                                "age_category": "<4 years",
-                                                "location": "California"
-                                            },
-                                            {
-                                                "device": "CR204",
-                                                "lastLoggedInUser": "amy",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "XPS 13 9310",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "15.8GB",
-                                                "cpu": "Intel Core i7-1165G7",
-                                                "total_storage": "512GB",
-                                                "free_storage": "310GB",
-                                                "age": "2.0 years",
-                                                "age_category": "<4 years",
-                                                "location": "Capetown"
-                                            },
-                                            {
-                                                "device": "CR205",
-                                                "lastLoggedInUser": "harry",
-                                                "manufacturer": "Asus",
-                                                "model": "ZenBook UX425",
-                                                "os": "Windows 11 Home",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i5-1135G7",
-                                                "total_storage": "256GB",
-                                                "free_storage": "80GB",
-                                                "age": "3.4 years",
-                                                "age_category": "<4 years",
-                                                "location": "London"
-                                            },
-                                            {
-                                                "device": "CR206",
-                                                "lastLoggedInUser": "kelly",
-                                                "manufacturer": "Lenovo",
-                                                "model": "ThinkPad T14 Gen 3",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "Intel Core i7-1260P",
-                                                "total_storage": "512GB",
-                                                "free_storage": "400GB",
-                                                "age": "0.9 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR207",
-                                                "lastLoggedInUser": "leon",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 5540",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "Intel Core i7-1355U",
-                                                "total_storage": "1TB",
-                                                "free_storage": "785GB",
-                                                "age": "0.7 years",
-                                                "age_category": "<4 years",
-                                                "location": "SOLA"
-                                            },
-                                            {
-                                                "device": "CR208",
-                                                "lastLoggedInUser": "peter",
-                                                "manufacturer": "HP",
-                                                "model": "ProBook 650 G8",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i5-1135G7",
-                                                "total_storage": "256GB",
-                                                "free_storage": "120GB",
-                                                "age": "3.0 years",
-                                                "age_category": "<4 years",
-                                                "location": "Mumbai"
-                                            },
-                                            {
-                                                "device": "CR209",
-                                                "lastLoggedInUser": "ella",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 7430",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "31.7GB",
-                                                "cpu": "Intel Core i7-1265U",
-                                                "total_storage": "512GB",
-                                                "free_storage": "270GB",
-                                                "age": "1.6 years",
-                                                "age_category": "<4 years",
-                                                "location": "Berlin"
-                                            },
-                                            {
-                                                "device": "CR210",
-                                                "lastLoggedInUser": "steve",
-                                                "manufacturer": "Apple",
-                                                "model": "MacBook Air M2",
-                                                "os": "macOS Sonoma",
-                                                "ram": "16GB",
-                                                "cpu": "Apple M2",
-                                                "total_storage": "512GB",
-                                                "free_storage": "390GB",
-                                                "age": "1.0 years",
-                                                "age_category": "<4 years",
-                                                "location": "London"
-                                            },
+            try:
+                import json
+                with open(dummy_json_path, 'r', encoding='utf-8') as f:
+                    demo_data = json.load(f)
 
-                                            {
-                                                "device": "CR211",
-                                                "lastLoggedInUser": "bruce",
-                                                "manufacturer": "HP",
-                                                "model": "EliteBook 840 G7",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i5-10210U",
-                                                "total_storage": "256GB",
-                                                "free_storage": "90GB",
-                                                "age": "3.8 years",
-                                                "age_category": "<4 years",
-                                                "location": "Canada"
-                                            },
-                                            {
-                                                "device": "CR212",
-                                                "lastLoggedInUser": "tony",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Precision 5570",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "64GB",
-                                                "cpu": "Intel Core i9-12900H",
-                                                "total_storage": "2TB",
-                                                "free_storage": "1.4TB",
-                                                "age": "1.3 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR213",
-                                                "lastLoggedInUser": "nina",
-                                                "manufacturer": "Lenovo",
-                                                "model": "ThinkPad L15",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "15.8GB",
-                                                "cpu": "Intel Core i5-1135G7",
-                                                "total_storage": "256GB",
-                                                "free_storage": "110GB",
-                                                "age": "2.9 years",
-                                                "age_category": "<4 years",
-                                                "location": "California"
-                                            },
-                                            {
-                                                "device": "CR214",
-                                                "lastLoggedInUser": "ryan",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 3420",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i3-1115G4",
-                                                "total_storage": "128GB",
-                                                "free_storage": "50GB",
-                                                "age": "3.3 years",
-                                                "age_category": "<4 years",
-                                                "location": "Mumbai"
-                                            },
-                                            {
-                                                "device": "CR215",
-                                                "lastLoggedInUser": "olivia",
-                                                "manufacturer": "HP",
-                                                "model": "ProBook 440 G9",
-                                                "os": "Windows 11 Home",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i3-1215U",
-                                                "total_storage": "256GB",
-                                                "free_storage": "170GB",
-                                                "age": "1.1 years",
-                                                "age_category": "<4 years",
-                                                "location": "New York"
-                                            },
-                                            {
-                                                "device": "CR216",
-                                                "lastLoggedInUser": "sam",
-                                                "manufacturer": "Asus",
-                                                "model": "VivoBook S14",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i5-1240P",
-                                                "total_storage": "512GB",
-                                                "free_storage": "350GB",
-                                                "age": "1.5 years",
-                                                "age_category": "<4 years",
-                                                "location": "Berlin"
-                                            },
-                                            {
-                                                "device": "CR217",
-                                                "lastLoggedInUser": "alex",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "XPS 15 9520",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "32GB",
-                                                "cpu": "Intel Core i7-12700H",
-                                                "total_storage": "1TB",
-                                                "free_storage": "760GB",
-                                                "age": "1.2 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR218",
-                                                "lastLoggedInUser": "grace",
-                                                "manufacturer": "HP",
-                                                "model": "Spectre x360 14",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i7-1165G7",
-                                                "total_storage": "512GB",
-                                                "free_storage": "390GB",
-                                                "age": "2.0 years",
-                                                "age_category": "<4 years",
-                                                "location": "SOLA"
-                                            },
+                # Fetch organization name dynamically based on org_id
+                organization_name = get_organization_name(org_id)
+                logger.info(f"Fetched organization name: {organization_name} for org_id: {org_id}")
 
-                                            {
-                                                "device": "CR219",
-                                                "lastLoggedInUser": "richard",
-                                                "manufacturer": "Lenovo",
-                                                "model": "IdeaPad Slim 7",
-                                                "os": "Windows 11 Home",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i5-1035G1",
-                                                "total_storage": "512GB",
-                                                "free_storage": "200GB",
-                                                "age": "3.6 years",
-                                                "age_category": "<4 years",
-                                                "location": "Capetown"
-                                            },
-                                            {
-                                                "device": "CR220",
-                                                "lastLoggedInUser": "sara",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 7410",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i7-10610U",
-                                                "total_storage": "512GB",
-                                                "free_storage": "278GB",
-                                                "age": "2.4 years",
-                                                "age_category": "<4 years",
-                                                "location": "New York"
-                                            },
-                                            {
-                                                "device": "CR221",
-                                                "lastLoggedInUser": "derek",
-                                                "manufacturer": "HP",
-                                                "model": "Elite Dragonfly G2",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i7-1165G7",
-                                                "total_storage": "256GB",
-                                                "free_storage": "140GB",
-                                                "age": "1.9 years",
-                                                "age_category": "<4 years",
-                                                "location": "Berlin"
-                                            },
-                                            {
-                                                "device": "CR222",
-                                                "lastLoggedInUser": "walter",
-                                                "manufacturer": "Acer",
-                                                "model": "Swift 5",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i5-1135G7",
-                                                "total_storage": "512GB",
-                                                "free_storage": "330GB",
-                                                "age": "2.8 years",
-                                                "age_category": "<4 years",
-                                                "location": "London"
-                                            },
-                                            {
-                                                "device": "CR223",
-                                                "lastLoggedInUser": "vicky",
-                                                "manufacturer": "HP",
-                                                "model": "Envy 15",
-                                                "os": "Windows 11 Home",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i7-10750H",
-                                                "total_storage": "1TB",
-                                                "free_storage": "700GB",
-                                                "age": "3.0 years",
-                                                "age_category": "<4 years",
-                                                "location": "California"
-                                            },
-                                            {
-                                                "device": "CR224",
-                                                "lastLoggedInUser": "maria",
-                                                "manufacturer": "Lenovo",
-                                                "model": "ThinkPad P1 Gen 4",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "32GB",
-                                                "cpu": "Intel Core i7-11850H",
-                                                "total_storage": "1TB",
-                                                "free_storage": "850GB",
-                                                "age": "1.1 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR225",
-                                                "lastLoggedInUser": "andrew",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 3330",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i3-1115G4",
-                                                "total_storage": "256GB",
-                                                "free_storage": "150GB",
-                                                "age": "2.5 years",
-                                                "age_category": "<4 years",
-                                                "location": "Mumbai"
-                                            },
-                                            {
-                                                "device": "CR226",
-                                                "lastLoggedInUser": "karen",
-                                                "manufacturer": "HP",
-                                                "model": "Omen 16",
-                                                "os": "Windows 11 Home",
-                                                "ram": "32GB",
-                                                "cpu": "Intel Core i7-12700H",
-                                                "total_storage": "1TB",
-                                                "free_storage": "600GB",
-                                                "age": "1.3 years",
-                                                "age_category": "<4 years",
-                                                "location": "SOLA"
-                                            },
-                                            {
-                                                "device": "CR227",
-                                                "lastLoggedInUser": "louis",
-                                                "manufacturer": "Acer",
-                                                "model": "Aspire 5",
-                                                "os": "Windows 11 Home",
-                                                "ram": "8GB",
-                                                "cpu": "Intel Core i3-1215U",
-                                                "total_storage": "256GB",
-                                                "free_storage": "165GB",
-                                                "age": "2.2 years",
-                                                "age_category": "<4 years",
-                                                "location": "Capetown"
-                                            },
-                                            {
-                                                "device": "CR228",
-                                                "lastLoggedInUser": "irene",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Precision 3480",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "32GB",
-                                                "cpu": "Intel Core i7-13800H",
-                                                "total_storage": "1TB",
-                                                "free_storage": "790GB",
-                                                "age": "0.8 years",
-                                                "age_category": "<4 years",
-                                                "location": "London"
-                                            },
-                                            {
-                                                "device": "CR229",
-                                                "lastLoggedInUser": "shawn",
-                                                "manufacturer": "Lenovo",
-                                                "model": "ThinkPad X13",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i5-1135G7",
-                                                "total_storage": "256GB",
-                                                "free_storage": "180GB",
-                                                "age": "3.2 years",
-                                                "age_category": "<4 years",
-                                                "location": "California"
-                                            },
-                                            {
-                                                "device": "CR230",
-                                                "lastLoggedInUser": "simon",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 7430 2-in-1",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "32GB",
-                                                "cpu": "Intel Core i7-1280P",
-                                                "total_storage": "1TB",
-                                                "free_storage": "820GB",
-                                                "age": "1.4 years",
-                                                "age_category": "<4 years",
-                                                "location": "New York"
-                                            },
-                                            {
-                                                "device": "CR231",
-                                                "lastLoggedInUser": "noah",
-                                                "manufacturer": "HP",
-                                                "model": "EliteBook 830 G9",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i5-1250P",
-                                                "total_storage": "512GB",
-                                                "free_storage": "390GB",
-                                                "age": "0.7 years",
-                                                "age_category": "<4 years",
-                                                "location": "Berlin"
-                                            },
-                                            {
-                                                "device": "CR232",
-                                                "lastLoggedInUser": "ruby",
-                                                "manufacturer": "Asus",
-                                                "model": "ROG Strix G15",
-                                                "os": "Windows 11 Home",
-                                                "ram": "32GB",
-                                                "cpu": "AMD Ryzen 9 5900HX",
-                                                "total_storage": "1TB",
-                                                "free_storage": "620GB",
-                                                "age": "1.9 years",
-                                                "age_category": "<4 years",
-                                                "location": "Texas"
-                                            },
-                                            {
-                                                "device": "CR233",
-                                                "lastLoggedInUser": "mark",
-                                                "manufacturer": "Dell Inc.",
-                                                "model": "Latitude 5540",
-                                                "os": "Windows 11 Professional Edition",
-                                                "ram": "16GB",
-                                                "cpu": "Intel Core i5-1335U",
-                                                "total_storage": "512GB",
-                                                "free_storage": "410GB",
-                                                "age": "0.6 years",
-                                                "age_category": "<4 years",
-                                                "location": "SOLA"
-                                            }
-                                        ],
-                            "device_inventory_server": [
-                    {
-                        "device": "CR-7",
-                        "lastLoggedInUser": "network",
-                        "manufacturer": "Microsoft Corporation",
-                        "model": "Virtual Machine",
-                        "os": "Windows Server 2016 Standard Edition",
-                        "ram": "11.6GB",
-                        "cpu": "Intel(R) Xeon(R) Silver 4114 CPU @ 2.20GHz",
-                        "total_storage": "4523.3GB",
-                        "free_storage": "1087.7GB",
-                        "age": "2.2 years",
-                        "age_category": "<4 years",
-                        "location": "Wall street"
-                    },
-                    {
-                        "device": "CR-12",
-                        "lastLoggedInUser": "system-admin",
-                        "manufacturer": "Dell Inc.",
-                        "model": "PowerEdge R740",
-                        "os": "Windows Server 2019 Datacenter Edition",
-                        "ram": "63.9GB",
-                        "cpu": "Intel(R) Xeon(R) Gold 5218R CPU @ 2.10GHz",
-                        "total_storage": "8192GB",
-                        "free_storage": "4021GB",
-                        "age": "1.8 years",
-                        "age_category": "<4 years",
-                        "location": "New Jersey"
-                    },
-                    {
-                        "device": "CR-18",
-                        "lastLoggedInUser": "root",
-                        "manufacturer": "Hewlett-Packard",
-                        "model": "ProLiant DL380 Gen10",
-                        "os": "Ubuntu Server 22.04 LTS",
-                        "ram": "127.8GB",
-                        "cpu": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz",
-                        "total_storage": "10240GB",
-                        "free_storage": "6850GB",
-                        "age": "3.4 years",
-                        "age_category": "<4 years",
-                        "location": "Wall street"
-                    },
-                    {
-                        "device": "CR-25",
-                        "lastLoggedInUser": "automation",
-                        "manufacturer": "VMware",
-                        "model": "ESXi Virtual Machine",
-                        "os": "Windows Server 2022 Standard Edition",
-                        "ram": "31.7GB",
-                        "cpu": "Intel(R) Xeon(R) Gold 6230 CPU @ 2.10GHz",
-                        "total_storage": "6144GB",
-                        "free_storage": "2980GB",
-                        "age": "0.9 years",
-                        "age_category": "<4 years",
-                        "location": "Frankfurt"
-                    }
-              ]
+                # Replace placeholders in organization data with actual values
+                if "organization" in demo_data:
+                    demo_data["organization"]["id"] = str(org_id)
+                    demo_data["organization"]["name"] = organization_name
 
-                        }
-                    },
-                    "Autotask": {
-                        "charts": {
-                            "daily_tickets_trend": {
-                                "created": [
-                                    1,
-                                    14,
-                                    3,
-                                    8,
-                                    5,
-                                    0,
-                                    1,
-                                    7,
-                                    7,
-                                    12,
-                                    2,
-                                    3,
-                                    0,
-                                    0,
-                                    9,
-                                    7,
-                                    4,
-                                    0,
-                                    5,
-                                    0,
-                                    0,
-                                    4,
-                                    6,
-                                    9,
-                                    2,
-                                    4,
-                                    1,
-                                    1,
-                                    7,
-                                    6
-                                ],
-                                "completed": [
-                                    0,
-                                    10,
-                                    7,
-                                    5,
-                                    4,
-                                    0,
-                                    0,
-                                    4,
-                                    8,
-                                    11,
-                                    10,
-                                    2,
-                                    0,
-                                    0,
-                                    6,
-                                    7,
-                                    4,
-                                    1,
-                                    5,
-                                    0,
-                                    0,
-                                    1,
-                                    4,
-                                    1,
-                                    1,
-                                    8,
-                                    1,
-                                    0,
-                                    3,
-                                    6
-                                ],
-                                "days": [
-                                    1,
-                                    2,
-                                    3,
-                                    4,
-                                    5,
-                                    6,
-                                    7,
-                                    8,
-                                    9,
-                                    10,
-                                    11,
-                                    12,
-                                    13,
-                                    14,
-                                    15,
-                                    16,
-                                    17,
-                                    18,
-                                    19,
-                                    20,
-                                    21,
-                                    22,
-                                    23,
-                                    24,
-                                    25,
-                                    26,
-                                    27,
-                                    28,
-                                    29,
-                                    30
-                                ]
-                            },
-                            "monthly_tickets_by_type": {
-                                "workstation": 19,
-                                "email": 15,
-                                "user_access": 18,
-                                "application_software": 16,
-                                "server": 4,
-                                "network_internet": 5,
-                                "printer_scanner": 3,
-                                "shared_drive": 25,
-                                "cybersecurity": 3,
-                                "other": 20
-                            },
-                            "open_ticket_priority_distribution": {
-                                "critical": 2,
-                                "high": 3,
-                                "medium": 8,
-                                "low": 1
-                            },
-                            "sla_performance": {
-                                "first_response_percentage": 98.1,
-                                "resolution_percentage": 71.9
-                            },
-                            "open_tickets_by_issue_type": [
-                                {
-                                    "issue_type": "Email",
-                                    "total_count": 3,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "SPAM",
-                                            "count": 1
-                                        },
-                                        {
-                                            "sub_issue_type": "Email Delivery Failure",
-                                            "count": 2
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "Network/Internet",
-                                    "total_count": 2,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "Network Performance",
-                                            "count": 2
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "Phone",
-                                    "total_count": 2,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "VoIP Not Working",
-                                            "count": 1
-                                        },
-                                        {
-                                            "sub_issue_type": "Call Quality Issues",
-                                            "count": 1
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "Printer/Scanner/Copier",
-                                    "total_count": 2,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "Print Error",
-                                            "count": 1
-                                        },
-                                        {
-                                            "sub_issue_type": "Scanner Not Detected",
-                                            "count": 1
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "Shared Drive",
-                                    "total_count": 2,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "Shared Drive Access/Permissions",
-                                            "count": 1
-                                        },
-                                        {
-                                            "sub_issue_type": "File Synchronization Issue",
-                                            "count": 1
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "User Access and Management",
-                                    "total_count": 2,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "Employee Termination",
-                                            "count": 1
-                                        },
-                                        {
-                                            "sub_issue_type": "Password Reset Request",
-                                            "count": 1
-                                        }
-                                    ]
-                                },
-                                {
-                                    "issue_type": "Workstation (Laptop/Desktop)",
-                                    "total_count": 1,
-                                    "sub_issues": [
-                                        {
-                                            "sub_issue_type": "Other Peripheral Device",
-                                            "count": 1
-                                        }
-                                    ]
-                                }
-                            ],
-                            "tickets_by_contact": {
-                                "tickets_by_contact_summary": {
-                                    "contacts_summary": {
-                                        "contacts_count": 22,
-                                        "total_tickets": 128,
-                                        "top_contact": "Emily Gupton"
-                                    }
-                                },
-                                "data": [
-                                    {
-                                        "name": "L. Gupton",
-                                        "tickets": 49
-                                    },
-                                    {
-                                        "name": "Automation Sheets",
-                                        "tickets": 26
-                                    },
-                                    {
-                                        "name": "Other",
-                                        "tickets": 20
-                                    },
-                                    {
-                                        "name": "TLIT unknown",
-                                        "tickets": 6
-                                    },
-                                    {
-                                        "name": "Mark Wood",
-                                        "tickets": 5
-                                    },
-                                    {
-                                        "name": "Sarah Williams",
-                                        "tickets": 5
-                                    },
-                                    {
-                                        "name": "Stinnette True",
-                                        "tickets": 5
-                                    },
-                                    {
-                                        "name": "Amy Vans",
-                                        "tickets": 2
-                                    },
-                                    {
-                                        "name": "Chris Morris",
-                                        "tickets": 2
-                                    },
-                                    {
-                                        "name": "Camille Gordon",
-                                        "tickets": 2
-                                    },
-                                    {
-                                        "name": "Scott Lee",
-                                        "tickets": 2
-                                    },
-                                    {
-                                        "name": "Pamela Frisina-Rosado",
-                                        "tickets": 2
-                                    },
-                                    {
-                                        "name": "JD Frank",
-                                        "tickets": 2
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    "Cove": {
-                        "charts": {
-                            "total_devices_storage_summary_cove": {
-                              "totalDevices": 38,
-                              "totalStorage": 4.30
-                            },
-                            "asset_type_distribution_cove": {
-                              "workstations": 34,
-                              "servers": 4,
-                              "others": 0
-                            },
-                            "devices_distribution_cove": {
-                              "physical": 28,
-                              "virtual": 10,
-                              "others": 0
-                            },
-                            "retention_policy_distribution_cove": {
-                              "365 Day Retention": 4,
-                              "90D-52W-36M-7Y 2": 3,
-                              "180 Day Retention": 5
-                              }
-                            }
-                          },
-                    "Proofpoint": {
-                            "charts": {
-                                "threat_type_pp": {
-                                    "spam": 890,
-                                    "virus": 475,
-                                    "phishing": 820,
-                                    "malicious_attachment": 340,
-                                    "imposter": 180
-                                },
-                              "traffic_direction_comparison_pp": [
-                                { "category": "Clean", "inbound": 1250, "outbound": 1180 },
-                                { "category": "Spam", "inbound": 900, "outbound": 1200 },
-                                { "category": "Virus", "inbound": 450, "outbound": 85 },
-                                { "category": "Fraud", "inbound": 320, "outbound": 45 },
-                                { "category": "Blacklist", "inbound": 680, "outbound": 120 }
-                              ],
-                              "inbound_mail_composition_pp": {
-                                "clean": 150,
-                                "spam": 520,
-                                "virus": 185,
-                                "fraud": 212
-                              }
-                            }
-                          },
-                    "ConnectSecure": {
-                        "charts": {
-                            "asset_type_distribution": {
-                                "live_count": {
-                                    "discovered": 25,
-                                    "other_asset": 12,
-                                    "unknown": 1
-                                },
-                                "monthly_count": {
-                                    "discovered": 6,
-                                    "other_asset": 2,
-                                    "unknown": 1
-                                }
-                            },
-                            "operating_system_distribution": {
-                                "live_count": {
-                                    "Windows": 29,
-                                    "Linux": 1,
-                                    "Others": 8
-                                },
-                                "monthly_count": {
-                                    "Others": 2,
-                                    "Windows": 5
-                                }
-                            },
-                            "security_risk_score": {
-                                "live_count": 55.39,
-                                "monthly_count": 2.17
-                            },
-                            "agent_type_distribution": {
-                                "total_agents": 38,
-                                "breakdown": [
-                                    {
-                                        "agent_type": "LIGHTWEIGHT",
-                                        "count": 27,
-                                        "percentage": 71.1
-                                    },
-                                    {
-                                        "agent_type": "PROBE",
-                                        "count": 11,
-                                        "percentage": 28.9
-                                    }
-                                ]
-                            },
-                            "vulnerability_severity": {
-                                "live_count": {
-                                    "critical": 28,
-                                    "high": 425,
-                                    "medium": 277,
-                                    "low": 25
-                                },
-                                "monthly_count": {
-                                    "critical": 0,
-                                    "high": 0,
-                                    "medium": 0,
-                                    "low": 0
-                                }
-                            }
-                        }
-                    },
-                    "Bitdefender": {
-                    "charts": {
-                        "endpoint_utilization_bitdefender": {
-                            "activeEndpoints": 36,
-                            "managedEndpoints": 38
-                        },
-                        "riskScore_bitdefender" : {
-                                "value": "50%",
-                                "impact": "Medium",
-                                "misconfigurations": "80%",
-                                "appVulnerabilities": "30%",
-                                "humanRisks": "10%",
-                                "industryModifier": "0%"},
-                     "inventory_summary_bitdefender": {
-                            "summary": {
-                                "windowsWorkstations": 33,
-                                "windowsServers": 4,
-                                "macOS": 0,
-                                "linux": 1
-                            },
-                            "count": {
-                                "physicalMachines": 28,
-                                "virtualMachines": 10
-                            }
-                        }
-            },
-            "tables": {
-                "networkinventory_bitdefender": [
-                    {
-                        "Module": "antimalware",
-                        "enable": 80,
-                        "disable": 0,
-                        "notInstalled": 2,
-                        "displayName": "Antimalware"
-                    },
-                    {
-                        "Module": "advancedThreatControl",
-                        "enable": 81,
-                        "disable": 1,
-                        "notInstalled": 0,
-                        "displayName": "Advanced Threat Control"
-                    },
-                    {
-                        "Module": "advancedAntiExploit",
-                        "enable": 82,
-                        "disable": 0,
-                        "notInstalled": 0,
-                        "displayName": "Advanced Anti-Exploit"
-                    },
-                    {
-                        "Module": "firewall",
-                        "enable": 78,
-                        "disable": 1,
-                        "notInstalled": 3,
-                        "displayName": "Firewall"
-                    },
-                    {
-                        "Module": "networkAttackDefense",
-                        "enable": 75,
-                        "disable": 2,
-                        "notInstalled": 5,
-                        "displayName": "Network Protection"
-                    },
-                    {
-                        "Module": "deviceControl",
-                        "enable": 82,
-                        "disable": 0,
-                        "notInstalled": 0,
-                        "displayName": "Device Control"
-                    },
-                    {
-                        "Module": "encryption",
-                        "enable": 2,
-                        "disable": 0,
-                        "notInstalled": 80,
-                        "displayName": "Encryption"
-                    },
-                    {
-                        "Module": "patchManagement",
-                        "enable": 70,
-                        "disable": 5,
-                        "notInstalled": 7,
-                        "displayName": "Patch Management"
-                    },
-                    {
-                        "Module": "edrSensor",
-                        "enable": 65,
-                        "disable": 0,
-                        "notInstalled": 17,
-                        "displayName": "EDR Sensor"
-                    },
-                    {
-                        "Module": "powerUser",
-                        "enable": 12,
-                        "disable": 0,
-                        "notInstalled": 70,
-                        "displayName": "Power User"
-                    },
-                    {
-                        "Module": "exchange",
-                        "enable": 0,
-                        "disable": 0,
-                        "notInstalled": 82,
-                        "displayName": "Exchange Protection"
-                    },
-                    {
-                        "Module": "containerProtection",
-                        "enable": 0,
-                        "disable": 0,
-                        "notInstalled": 82,
-                        "displayName": "Container Protection"
-                    },
-                    {
-                        "Module": "integrityMonitoring",
-                        "enable": 10,
-                        "disable": 3,
-                        "notInstalled": 70,
-                        "displayName": "Integrity Monitoring"
-                    },
-                    {
-                        "Module": "phASR",
-                        "enable": 5,
-                        "disable": 0,
-                        "notInstalled": 77,
-                        "displayName": "PHASR"
-                    }
-                ]
-            }
-            },
-                    "execution_info": {
-                        "generated_at": "2025-10-09T19:05:15.407535",
-                        "data_sources_processed": [
-                            "NinjaOne",
-                            "Autotask",
-                            "ConnectSecure"
-                        ],
-                        "report_type": "Monthly Customer Report",
-                        "processing_time_seconds": 60.8,
-                        "next_update": "2025-11-08T19:05:51.260348"
-                    }
-                }
+                logger.info(f"Successfully loaded and customized demo data from {dummy_json_path}")
+
+            except FileNotFoundError:
+                logger.error(f"dummy.json file not found at {dummy_json_path}")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error="Demo data file not found"
+                )
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in dummy.json: {e}")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error=f"Invalid demo data format: {str(e)}"
+                )
+
+            # Return the demo data loaded from dummy.json
             return GraphApiResponse(
                 status_code=200,
                 data=demo_data,
                 error=None
             )
+
+
 
         # Step 1: Get account_id from user_id using Supabase RPC function
         try:
@@ -1496,25 +367,24 @@ async def generate_security_report_json_endpoint(
                 error=f"Failed to fetch organization details: {str(e)}"
             )
 
-        # Validate month if provided
+        # Validate month format if provided (should be "november_2024" format)
         if month:
             try:
-                # Import month selector to validate
+                # Import month selector to validate format
                 from security_reporting_system.src.utils.month_selector import MonthSelector
 
                 month_selector = MonthSelector()
-                available_months = month_selector.list_available_months()
-                available_month_names = [m['name'] for m in available_months]
+                # This will validate the format and raise ValueError if invalid
+                month_info = month_selector.get_month_by_name(month)
+                logger.info(f"Using month: {month} -> {month_info.display_name}")
 
-                if month not in available_month_names:
-                    return GraphApiResponse(
-                        status_code=400,
-                        data=None,
-                        error=f"Invalid month: {month}. Available months: {', '.join(available_month_names)}. Use /api/GetAvailableReportMonths to see all options."
-                    )
-
-                logger.info(f"Using month: {month}")
-
+            except ValueError as e:
+                # get_month_by_name raises ValueError with clear error message
+                return GraphApiResponse(
+                    status_code=400,
+                    data=None,
+                    error=str(e)
+                )
             except Exception as e:
                 logger.error(f"Error validating month: {e}")
                 return GraphApiResponse(
@@ -1570,8 +440,23 @@ async def generate_security_report_json_endpoint(
         try:
             logger.info("Transforming data using FrontendTransformer...")
 
+            # Convert month parameter to "November 2024" format for reporting_period
+            reporting_period = None
+            if month:
+                try:
+                    parts = month.split('_')
+                    month_name = parts[0].capitalize()  # "november" -> "November"
+                    year = parts[1]  # "2024"
+                    reporting_period = f"{month_name} {year}"  # "November 2024"
+                except:
+                    pass  # If parsing fails, reporting_period will be None and use current month
+
             transformer = FrontendTransformer()
-            frontend_json = transformer.transform_to_frontend_json(security_data, account_id=account_id)
+            frontend_json = transformer.transform_to_frontend_json(
+                security_data,
+                account_id=account_id,
+                reporting_period=reporting_period
+            )
 
             if not frontend_json:
                 logger.error("Frontend transformation returned empty result")
@@ -1590,8 +475,7 @@ async def generate_security_report_json_endpoint(
                 data=None,
                 error=f"Frontend transformation failed: {str(e)}"
             )
-
-        # Get organization info for response (already fetched earlier)
+        # Get organization info for response
         logger.info(f"Successfully generated security report JSON for {org_name}")
 
         # Return the transformed JSON data
@@ -2479,6 +1363,356 @@ async def save_integration_credentials_endpoint(request: SaveIntegrationCredenti
 
     except Exception as e:
         logger.error(f"Unexpected error in SaveIntegrationCredentials: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/SaveSecurityReport", response_model=GraphApiResponse, summary="Generate and Save Security Report")
+async def save_security_report_endpoint(
+        user_id: str,
+        org_id: int,
+        month: Optional[str] = None
+):
+    """
+    Generate a security report and save it to the database.
+
+    This endpoint:
+    1. Calls the existing GenerateSecurityReportJSON endpoint to get the report data
+    2. Extracts organization and platform data from the response
+    3. Saves the report to generated_reports and report_platform_data tables
+
+    Args:
+        user_id: User UUID (auth_user_id) from platform_users table
+        org_id: Organization ID
+        month: Optional month in 'month_year' format (e.g., 'november_2024', 'december_2024'). Defaults to previous month.
+
+    Returns:
+        GraphApiResponse with report_id and saved platforms information
+
+    Example Usage:
+        POST /api/SaveSecurityReport
+        Body: {
+            "user_id": "uuid-here",
+            "org_id": 41,
+            "month": "december_2024"
+        }
+    """
+    try:
+        logger.info(f"SaveSecurityReport called for user_id: {user_id}, org_id: {org_id}, month: {month or 'previous_month'}")
+
+        # Step 1: Call the existing GenerateSecurityReportJSON endpoint to get report data
+        logger.info("Calling GenerateSecurityReportJSON endpoint to fetch report data")
+        report_response = await generate_security_report_json_endpoint(
+            user_id=user_id,
+            org_id=org_id,
+            month=month
+        )
+
+        # Check if report generation was successful
+        if report_response.status_code != 200 or not report_response.data:
+            logger.error(f"Failed to generate report: status={report_response.status_code}, error={report_response.error}")
+            return GraphApiResponse(
+                status_code=report_response.status_code,
+                data=None,
+                error=f"Failed to generate report: {report_response.error}"
+            )
+
+        json_response = report_response.data
+        logger.info("Successfully fetched report JSON from GenerateSecurityReportJSON")
+
+        # Step 2: Initialize Supabase client
+        from supabase import create_client
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        supabase = create_client(supabase_url, supabase_key)
+
+        # Step 3: Parse month from month_year format (e.g., "november_2024")
+        organization_data = json_response.get("organization", {})
+
+        # Parse month parameter if provided, otherwise use reporting_period fallback
+        if month and '_' in month:
+            # Parse "november_2024" format
+            parts = month.split('_')
+            month_name_lowercase = parts[0].lower()
+            report_year = int(parts[1])
+
+            # Capitalize first letter for database storage: "November"
+            report_month = month_name_lowercase.capitalize()
+
+            logger.info(f"Parsed month parameter '{month}' -> report_month: {report_month}, report_year: {report_year}")
+        else:
+            # Fallback: Extract from reporting_period in organization data (legacy)
+            reporting_period = organization_data.get("reporting_period", "")
+
+            if reporting_period:
+                parts = reporting_period.split()
+                report_month = parts[0] if len(parts) > 0 else "Unknown"
+                report_year = int(parts[1]) if len(parts) > 1 else datetime.now().year
+            else:
+                report_month = "Unknown"
+                report_year = datetime.now().year
+
+            logger.info(f"Extracted from reporting_period: {report_month}, {report_year}")
+
+        # Step 4: Insert into generated_reports table
+        logger.info("Inserting report header into generated_reports table")
+
+        execution_info = json_response.get("execution_info", {})
+
+        report_insert_data = {
+            "organization_id": org_id,
+            "report_month": report_month,
+            "report_year": report_year,
+            "organization_data": organization_data,
+            "execution_info": execution_info,
+            "status": "completed",
+            "generated_at": datetime.now().isoformat()
+        }
+
+        report_insert_response = supabase.table('generated_reports').insert(report_insert_data).execute()
+
+        if not report_insert_response.data or len(report_insert_response.data) == 0:
+            logger.error("Failed to insert report into generated_reports table")
+            return GraphApiResponse(
+                status_code=500,
+                data=None,
+                error="Failed to save report to database"
+            )
+
+        report_id = report_insert_response.data[0]['id']
+        logger.info(f"Successfully inserted report with ID: {report_id}")
+
+        # Step 5: Query integrations table to get platform mapping
+        logger.info("Querying integrations table for platform mapping")
+        integrations_response = supabase.table('integrations')\
+            .select('id, json_object_name')\
+            .eq('is_active', True)\
+            .execute()
+
+        if not integrations_response.data:
+            logger.warning("No active integrations found in database")
+            integration_mapping = {}
+        else:
+            # Create mapping: json_object_name -> integration_id
+            integration_mapping = {
+                row['json_object_name']: row['id']
+                for row in integrations_response.data
+            }
+            logger.info(f"Created integration mapping for {len(integration_mapping)} platforms")
+
+        # Step 6: Loop through JSON response and insert platform data
+        platforms_saved = []
+        platforms_skipped = []
+
+        for key, value in json_response.items():
+            # Skip non-platform keys
+            if key in ["organization", "execution_info"]:
+                continue
+
+            # Get integration_id for this platform
+            integration_id = integration_mapping.get(key)
+
+            if integration_id:
+                logger.info(f"Saving platform data for: {key} (integration_id: {integration_id})")
+
+                try:
+                    # Insert into report_platform_data table
+                    platform_insert_data = {
+                        "report_id": report_id,
+                        "integration_id": integration_id,
+                        "platform_data": value,
+                        "created_at": datetime.now().isoformat()
+                    }
+
+                    platform_insert_response = supabase.table('report_platform_data').insert(platform_insert_data).execute()
+
+                    if platform_insert_response.data:
+                        platforms_saved.append(key)
+                        logger.info(f"Successfully saved platform data for: {key}")
+                    else:
+                        logger.warning(f"Failed to save platform data for: {key}")
+                        platforms_skipped.append(key)
+
+                except Exception as e:
+                    logger.error(f"Error saving platform data for {key}: {e}")
+                    platforms_skipped.append(key)
+            else:
+                logger.warning(f"Platform '{key}' not found in integrations table. Skipping.")
+                platforms_skipped.append(key)
+
+        # Step 7: Return success response
+        response_data = {
+            "success": True,
+            "report_id": report_id,
+            "organization_id": org_id,
+            "report_month": report_month,
+            "report_year": report_year,
+            "platforms_saved": platforms_saved,
+            "platforms_skipped": platforms_skipped,
+            "total_platforms": len(platforms_saved),
+            "pdf_url": None
+        }
+
+        logger.info(f"SaveSecurityReport completed successfully. Report ID: {report_id}, Platforms saved: {len(platforms_saved)}")
+
+        return GraphApiResponse(
+            status_code=200,
+            data=response_data,
+            error=None
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in SaveSecurityReport: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return GraphApiResponse(
+            status_code=500,
+            data=None,
+            error=f"Internal server error: {str(e)}"
+        )
+
+
+@router.get("/GetSavedSecurityReport", response_model=GraphApiResponse, summary="Get Saved Security Report")
+async def get_saved_security_report_endpoint(
+        org_id: int = Query(..., description="Organization ID"),
+        month: str = Query(..., description="Report month in 'month_year' format (e.g., 'november_2024')")
+):
+    """
+    Retrieve a previously saved security report from the database.
+
+    This endpoint:
+    1. Parses the month_year parameter into month and year
+    2. Queries generated_reports table by org_id, month, and year
+    3. Fetches all platform data from report_platform_data table
+    4. Reconstructs the JSON response in the same format as /GenerateSecurityReportJSON
+
+    Args:
+        org_id: Organization ID
+        month: Month in 'month_year' format (e.g., 'november_2024', 'december_2024')
+
+    Returns:
+        GraphApiResponse with the same JSON structure as GenerateSecurityReportJSON
+
+    Example Usage:
+        GET /api/GetSavedSecurityReport?org_id=41&month=november_2024
+    """
+    try:
+        logger.info(f"GetSavedSecurityReport called for org_id: {org_id}, month: {month}")
+
+        # Step 1: Parse month_year format
+        if '_' not in month:
+            return GraphApiResponse(
+                status_code=400,
+                data=None,
+                error=f"Invalid month format: '{month}'. Expected format: 'monthlowercase_year' (e.g., 'november_2024')"
+            )
+
+        parts = month.split('_')
+        if len(parts) != 2:
+            return GraphApiResponse(
+                status_code=400,
+                data=None,
+                error=f"Invalid month format: '{month}'. Expected format: 'monthlowercase_year'"
+            )
+
+        month_name_lowercase = parts[0].lower()
+        year_str = parts[1]
+
+        # Validate year
+        if not year_str.isdigit() or len(year_str) != 4:
+            return GraphApiResponse(
+                status_code=400,
+                data=None,
+                error=f"Invalid year: '{year_str}'. Year must be a 4-digit number."
+            )
+
+        report_year = int(year_str)
+        # Capitalize month for database query
+        report_month = month_name_lowercase.capitalize()
+
+        logger.info(f"Parsed month: {report_month}, year: {report_year}")
+
+        # Step 2: Initialize Supabase client
+        from supabase import create_client
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        supabase = create_client(supabase_url, supabase_key)
+
+        # Step 3: Query generated_reports table
+        logger.info(f"Querying generated_reports for org_id={org_id}, month={report_month}, year={report_year}")
+        report_response = supabase.table('generated_reports')\
+            .select('id, organization_data, execution_info, report_month, report_year, pdf_file_url, generated_at')\
+            .eq('organization_id', org_id)\
+            .eq('report_month', report_month)\
+            .eq('report_year', report_year)\
+            .order('generated_at', desc=True)\
+            .limit(1)\
+            .execute()
+
+        if not report_response.data or len(report_response.data) == 0:
+            logger.warning(f"No saved report found for org_id={org_id}, month={report_month}, year={report_year}")
+            return GraphApiResponse(
+                status_code=404,
+                data=None,
+                error=f"No saved report found for organization {org_id} in {report_month} {report_year}"
+            )
+
+        report = report_response.data[0]
+        report_id = report['id']
+
+        logger.info(f"Found report with ID: {report_id}")
+
+        # Step 4: Query report_platform_data table for all platform data
+        logger.info(f"Fetching platform data for report_id={report_id}")
+        platform_response = supabase.table('report_platform_data')\
+            .select('integration_id, platform_data')\
+            .eq('report_id', report_id)\
+            .execute()
+
+        # Step 5: Query integrations table to map integration_id -> json_object_name
+        integrations_response = supabase.table('integrations')\
+            .select('id, json_object_name')\
+            .execute()
+
+        # Create reverse mapping: integration_id -> json_object_name
+        integration_id_to_name = {
+            row['id']: row['json_object_name']
+            for row in integrations_response.data
+        }
+
+        # Step 6: Reconstruct the JSON response
+        reconstructed_json = {
+            "organization": report['organization_data'],
+            "execution_info": report['execution_info']
+        }
+
+        # Add platform data using json_object_name as keys
+        for platform in platform_response.data:
+            integration_id = platform['integration_id']
+            platform_name = integration_id_to_name.get(integration_id)
+
+            if platform_name:
+                reconstructed_json[platform_name] = platform['platform_data']
+                logger.info(f"Added platform data for: {platform_name}")
+            else:
+                logger.warning(f"No integration name found for integration_id: {integration_id}")
+
+        logger.info(f"Successfully reconstructed report with {len(platform_response.data)} platforms")
+
+        # Step 7: Return the reconstructed JSON
+        return GraphApiResponse(
+            status_code=200,
+            data=reconstructed_json,
+            error=None
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in GetSavedSecurityReport: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return GraphApiResponse(
