@@ -33,13 +33,14 @@ class FrontendTransformer:
     def __init__(self):
         pass
 
-    def transform_to_frontend_json(self, full_data: Dict[str, Any], account_id: int = None) -> Dict[str, Any]:
+    def transform_to_frontend_json(self, full_data: Dict[str, Any], account_id: int = None, reporting_period: str = None) -> Dict[str, Any]:
         """
         Transform the full security assessment data into frontend-optimized JSON.
 
         Args:
             full_data: Complete data from SecurityAssessmentOrchestrator
             account_id: Account ID for filtering selected charts (optional)
+            reporting_period: Reporting period in "Month Year" format (e.g., "November 2024") (optional)
 
         Returns:
             Frontend-optimized JSON structure filtered by account's selected charts
@@ -60,7 +61,7 @@ class FrontendTransformer:
             frontend_json = {}
 
             try:
-                frontend_json["organization"] = self._extract_organization_info(full_data)
+                frontend_json["organization"] = self._extract_organization_info(full_data, reporting_period)
             except Exception as e:
                 logger.warning(f"Failed to extract organization info: {e}")
                 frontend_json["organization"] = {"id": "unknown", "name": "Unknown Organization"}
@@ -346,9 +347,15 @@ class FrontendTransformer:
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return self._create_error_response(str(e))
 
-    def _extract_organization_info(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_organization_info(self, data: Dict[str, Any], reporting_period: str = None) -> Dict[str, Any]:
         """Extract organization information."""
         execution_info = data.get("execution_info", {})
+
+        # Use provided reporting_period, fallback to execution_info, then current month
+        if not reporting_period:
+            reporting_period = execution_info.get("reporting_period")
+        if not reporting_period:
+            reporting_period = datetime.now().strftime("%B %Y")
 
         return {
             "id": execution_info.get("organization_id", "unknown"),
@@ -356,7 +363,7 @@ class FrontendTransformer:
             "report_date": execution_info.get("timestamp", datetime.now().isoformat()),
             "created_by": "Security Reporting System",
             "company": "TeamLogic IT",
-            "reporting_period": datetime.now().strftime("%B %Y")
+            "reporting_period": reporting_period
         }
 
     def _extract_summary_metrics(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1267,34 +1274,36 @@ class FrontendTransformer:
         if "\\" in user:
             user = user.split("\\")[-1]  # Remove domain prefix like "SKG\"
 
-        # Calculate age from created timestamp
-        created_timestamp = device.get("created")
-        age_display = "Unknown"
-        age_category = "Unknown"
-        if created_timestamp:
-            try:
-                created_date = datetime.fromtimestamp(created_timestamp)
-                age_years = (datetime.now() - created_date).days / 365.25
-
-                # Round to 1 decimal place
-                age_rounded = round(age_years, 1)
-
-                # Format age display with proper singular/plural
-                if age_rounded == 1.0:
-                    age_display = "1.0 year"
-                else:
-                    age_display = f"{age_rounded:.1f} years"
-
-                # Categorize age into ranges
-                if age_rounded > 6:
-                    age_category = ">6 years"
-                elif age_rounded >= 4:
-                    age_category = "4-6 years"
-                else:
-                    age_category = "<4 years"
-            except:
-                age_display = "Unknown"
-                age_category = "Unknown"
+        # COMMENTED OUT: Age calculation - NinjaOne doesn't provide accurate warranty/purchase dates
+        # The 'created' timestamp only shows when device was added to NinjaOne, not actual device age
+        # TODO: Re-enable once warranty data is imported into NinjaOne
+        # created_timestamp = device.get("created")
+        # age_display = "Unknown"
+        # age_category = "Unknown"
+        # if created_timestamp:
+        #     try:
+        #         created_date = datetime.fromtimestamp(created_timestamp)
+        #         age_years = (datetime.now() - created_date).days / 365.25
+        #
+        #         # Round to 1 decimal place
+        #         age_rounded = round(age_years, 1)
+        #
+        #         # Format age display with proper singular/plural
+        #         if age_rounded == 1.0:
+        #             age_display = "1.0 year"
+        #         else:
+        #             age_display = f"{age_rounded:.1f} years"
+        #
+        #         # Categorize age into ranges
+        #         if age_rounded > 6:
+        #             age_category = ">6 years"
+        #         elif age_rounded >= 4:
+        #             age_category = "4-6 years"
+        #         else:
+        #             age_category = "<4 years"
+        #     except:
+        #         age_display = "Unknown"
+        #         age_category = "Unknown"
 
         # Calculate free storage from raw data
         free_storage_gb = device.get("free_space_gb", 0)
@@ -1321,8 +1330,8 @@ class FrontendTransformer:
             "cpu": device.get("cpu", "Unknown"),
             "total_storage": f"{device.get('storage_gb', 0):.1f}GB",
             "free_storage": f"{free_storage_gb:.1f}GB",
-            "age": age_display,
-            "age_category": age_category,
+            # "age": age_display,  # COMMENTED OUT - waiting for warranty data import
+            # "age_category": age_category,  # COMMENTED OUT - waiting for warranty data import
             "location": location
         }
 
