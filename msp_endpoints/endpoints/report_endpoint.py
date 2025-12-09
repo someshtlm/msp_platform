@@ -1459,8 +1459,15 @@ async def save_security_report_endpoint(
 
             logger.info(f"Extracted from reporting_period: {report_month}, {report_year}")
 
-        # Step 4: Insert into generated_reports table
-        logger.info("Inserting report header into generated_reports table")
+        # Step 4: Check if report already exists for this org_id, month, and year
+        logger.info(f"Checking if report already exists for org_id={org_id}, month={report_month}, year={report_year}")
+
+        existing_report_response = supabase.table('generated_reports')\
+            .select('id')\
+            .eq('organization_id', org_id)\
+            .eq('report_month', report_month)\
+            .eq('report_year', report_year)\
+            .execute()
 
         execution_info = json_response.get("execution_info", {})
 
@@ -1474,18 +1481,51 @@ async def save_security_report_endpoint(
             "generated_at": datetime.now().isoformat()
         }
 
-        report_insert_response = supabase.table('generated_reports').insert(report_insert_data).execute()
+        # If report exists, update it; otherwise, insert new one
+        if existing_report_response.data and len(existing_report_response.data) > 0:
+            existing_report_id = existing_report_response.data[0]['id']
+            logger.info(f"Report already exists with ID: {existing_report_id}. Updating existing report.")
 
-        if not report_insert_response.data or len(report_insert_response.data) == 0:
-            logger.error("Failed to insert report into generated_reports table")
-            return GraphApiResponse(
-                status_code=500,
-                data=None,
-                error="Failed to save report to database"
-            )
+            # Update existing report
+            report_update_response = supabase.table('generated_reports')\
+                .update(report_insert_data)\
+                .eq('id', existing_report_id)\
+                .execute()
 
-        report_id = report_insert_response.data[0]['id']
-        logger.info(f"Successfully inserted report with ID: {report_id}")
+            if not report_update_response.data or len(report_update_response.data) == 0:
+                logger.error("Failed to update existing report in generated_reports table")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error="Failed to update existing report in database"
+                )
+
+            report_id = existing_report_id
+            logger.info(f"Successfully updated report with ID: {report_id}")
+
+            # Delete old platform data for this report before inserting new data
+            logger.info(f"Deleting old platform data for report_id={report_id}")
+            supabase.table('report_platform_data')\
+                .delete()\
+                .eq('report_id', report_id)\
+                .execute()
+
+        else:
+            logger.info("No existing report found. Inserting new report.")
+
+            # Insert new report
+            report_insert_response = supabase.table('generated_reports').insert(report_insert_data).execute()
+
+            if not report_insert_response.data or len(report_insert_response.data) == 0:
+                logger.error("Failed to insert report into generated_reports table")
+                return GraphApiResponse(
+                    status_code=500,
+                    data=None,
+                    error="Failed to save report to database"
+                )
+
+            report_id = report_insert_response.data[0]['id']
+            logger.info(f"Successfully inserted new report with ID: {report_id}")
 
         # Step 5: Query integrations table to get platform mapping
         logger.info("Querying integrations table for platform mapping")
