@@ -1277,7 +1277,7 @@ class FrontendTransformer:
         # Age calculation using warranty.startDate from NinjaOne
         # Get warranty start date from references.warranty.startDate
         warranty_start = device.get("references", {}).get("warranty", {}).get("startDate", 0)
-        age_display = "-"
+        age_value = None  # Default to None if no warranty data
 
         if warranty_start and warranty_start != 0:
             try:
@@ -1287,16 +1287,13 @@ class FrontendTransformer:
                 # Round to 1 decimal place
                 age_rounded = round(age_years, 1)
 
-                # Format age display with proper singular/plural
-                if age_rounded == 1.0:
-                    age_display = "1.0 year"
-                else:
-                    age_display = f"{age_rounded:.1f} years"
+                # Return numeric value only (no "years" string)
+                age_value = age_rounded
             except:
-                age_display = "-"
+                age_value = None
         else:
-            # If warranty.startDate not present or is 0, set age to "-"
-            age_display = "-"
+            # If warranty.startDate not present or is 0, set age to None
+            age_value = None
 
         # Calculate free storage from raw data
         free_storage_gb = device.get("free_space_gb", 0)
@@ -1323,7 +1320,7 @@ class FrontendTransformer:
             "cpu": device.get("cpu", "Unknown"),
             "total_storage": f"{device.get('storage_gb', 0):.1f}GB",
             "free_storage": f"{free_storage_gb:.1f}GB",
-            "age": age_display,  # Using warranty.startDate, null if not available
+            "age": age_value,  # Numeric value only (e.g., 2.4, 5, 6.8), 0 if no warranty data
             "location": location
         }
 
