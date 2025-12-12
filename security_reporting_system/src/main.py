@@ -22,12 +22,14 @@ try:
     from security_reporting_system.src.processors.autotask_processor import AutotaskProcessor
     from security_reporting_system.src.processors.connectsecure_processor import ConnectSecureProcessor
     from security_reporting_system.src.processors.bitdefender_processor import BitdefenderProcessor
+    from security_reporting_system.src.processors.cove_processor import CoveProcessor
     from security_reporting_system.src.utils.frontend_transformer import FrontendTransformer
 except ImportError:
     from src.processors.ninjaone_processor import NinjaOneProcessor
     from src.processors.autotask_processor import AutotaskProcessor
     from src.processors.connectsecure_processor import ConnectSecureProcessor
     from src.processors.bitdefender_processor import BitdefenderProcessor
+    from src.processors.cove_processor import CoveProcessor
     from src.utils.frontend_transformer import FrontendTransformer
 
 # Import PDF report generator - UNCHANGED
@@ -177,6 +179,8 @@ class SecurityAssessmentOrchestrator:
         self.ninjaone_processor = None
         self.autotask_processor = None
         self.connectsecure_processor = None
+        self.bitdefender_processor = None
+        self.cove_processor = None
 
         logger.info(f"SecurityAssessmentOrchestrator initialized with account_id: {account_id}, org_id: {org_id}")
 
@@ -208,12 +212,14 @@ class SecurityAssessmentOrchestrator:
         autotask_company_id = org_data.get('autotask_id')
         connectsecure_company_id = org_data.get('connectsecure_id')
         bitdefender_company_id = org_data.get('bitdefender_company_id')
+        cove_customer_id = org_data.get('cove_customer_id')
 
         logger.info(f"Organization: {org_data.get('name', 'Unknown')} (ID: {self.org_id})")
         logger.info(f"  NinjaOne Org ID: {ninjaone_org_id}")
         logger.info(f"  Autotask Company ID: {autotask_company_id}")
         logger.info(f"  ConnectSecure Company ID: {connectsecure_company_id}")
         logger.info(f"  Bitdefender Company ID: {bitdefender_company_id}")
+        logger.info(f"  Cove Customer ID: {cove_customer_id}")
 
         if ninjaone_org_id:
             self.ninjaone_processor = NinjaOneProcessor(
@@ -248,11 +254,21 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"No Bitdefender company_id found - Bitdefender data will be skipped")
             self.bitdefender_processor = None
 
+        if cove_customer_id:
+            self.cove_processor = CoveProcessor(
+                account_id=self.account_id,
+                cove_customer_id=cove_customer_id
+            )
+        else:
+            logger.warning(f"No Cove customer_id found - Cove data will be skipped")
+            self.cove_processor = None
+
         return {
             'ninjaone_org_id': ninjaone_org_id,
             'autotask_company_id': autotask_company_id,
             'connectsecure_company_id': connectsecure_company_id,
             'bitdefender_company_id': bitdefender_company_id,
+            'cove_customer_id': cove_customer_id,
             'organization_name': org_data.get('name', 'Unknown')
         }
 
@@ -438,13 +454,30 @@ class SecurityAssessmentOrchestrator:
                 logger.error(traceback.format_exc())
                 return None, e
 
+        async def fetch_cove():
+            if not self.cove_processor:
+                logger.info("Skipping Cove - not configured")
+                return None, None
+            logger.info("Fetching Cove data...")
+            try:
+                raw = await asyncio.to_thread(
+                    self.cove_processor.fetch_all_data,
+                    self.cove_processor.customer_id
+                )
+                logger.info("Cove data fetched successfully")
+                return raw, None
+            except Exception as e:
+                logger.warning(f"Failed to fetch Cove data: {e}")
+                return None, e
+
         logger.info("Starting PARALLEL data fetching from all platforms...")
 
-        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result = await asyncio.gather(
+        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result = await asyncio.gather(
             fetch_ninjaone(),
             fetch_autotask(),
             fetch_connectsecure(),
-            fetch_bitdefender()
+            fetch_bitdefender(),
+            fetch_cove()
         )
 
         logger.info("Processing fetched data...")
@@ -502,6 +535,18 @@ class SecurityAssessmentOrchestrator:
         else:
             logger.info("=== BITDEFENDER: NO DATA (PROCESSOR NOT CONFIGURED) ===")
 
+        cove_raw, cove_error = cove_result
+        if cove_raw and not cove_error:
+            logger.info("Processing Cove data...")
+            cove_processed = self.cove_processor.process_all_data(cove_raw)
+            final_data.update(cove_processed)
+            if "execution_info" in final_data:
+                final_data["execution_info"]["data_sources"].append("Cove")
+            logger.info("Cove data processed successfully")
+        elif cove_error:
+            logger.warning(f"Cove fetch failed: {cove_error}")
+            logger.info("Continuing with available data sources...")
+
         return final_data
 
     async def test_all_connections(self) -> Dict[str, bool]:
@@ -535,6 +580,15 @@ class SecurityAssessmentOrchestrator:
                 results['connectsecure'] = False
         else:
             results['connectsecure'] = False
+
+        if self.cove_processor:
+            try:
+                results['cove'] = self.cove_processor.test_connection()
+            except Exception as e:
+                logger.error(f"Cove connection test failed: {e}")
+                results['cove'] = False
+        else:
+            results['cove'] = False
 
         return results
 
