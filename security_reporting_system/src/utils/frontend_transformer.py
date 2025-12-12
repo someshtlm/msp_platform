@@ -274,26 +274,26 @@ class FrontendTransformer:
                             "totalStorage": cove_metrics.get("total_storage_used", 0.0) or 0.0
                         }
 
-                    # Chart 2: Asset Type Distribution (Workstation/Server)
+                    # Chart 2: Asset Type Distribution (Physical/Virtual)
                     if is_chart_selected('cove', 'asset_type_distribution_cove'):
                         if "Cove" not in frontend_json:
                             frontend_json["Cove"] = {"charts": {}}
-                        device_dist = cove_metrics.get("device_distribution", {})
-                        frontend_json["Cove"]["charts"]["asset_type_distribution_cove"] = {
-                            "workstations": device_dist.get("Workstation", 0) or 0,
-                            "servers": device_dist.get("Server", 0) or 0,
-                            "others": device_dist.get("Undefined", 0) or 0
-                        }
-
-                    # Chart 3: Devices Distribution (Physical/Virtual)
-                    if is_chart_selected('cove', 'devices_distribution_cove'):
-                        if "Cove" not in frontend_json:
-                            frontend_json["Cove"] = {"charts": {}}
                         asset_dist = cove_metrics.get("asset_distribution", {})
-                        frontend_json["Cove"]["charts"]["devices_distribution_cove"] = {
+                        frontend_json["Cove"]["charts"]["asset_type_distribution_cove"] = {
                             "physical": asset_dist.get("Physical", 0) or 0,
                             "virtual": asset_dist.get("Virtual", 0) or 0,
                             "others": asset_dist.get("Undefined", 0) or 0
+                        }
+
+                    # Chart 3: Devices Distribution (Workstation/Server)
+                    if is_chart_selected('cove', 'devices_distribution_cove'):
+                        if "Cove" not in frontend_json:
+                            frontend_json["Cove"] = {"charts": {}}
+                        device_dist = cove_metrics.get("device_distribution", {})
+                        frontend_json["Cove"]["charts"]["devices_distribution_cove"] = {
+                            "workstations": device_dist.get("Workstation", 0) or 0,
+                            "servers": device_dist.get("Server", 0) or 0,
+                            "others": device_dist.get("Undefined", 0) or 0
                         }
 
                     # Chart 4: Retention Policy Distribution
@@ -386,13 +386,13 @@ class FrontendTransformer:
                             "totalStorage": 0.0
                         },
                         "asset_type_distribution_cove": {
-                            "workstations": 0,
-                            "servers": 0,
+                            "physical": 0,
+                            "virtual": 0,
                             "others": 0
                         },
                         "devices_distribution_cove": {
-                            "physical": 0,
-                            "virtual": 0,
+                            "workstations": 0,
+                            "servers": 0,
                             "others": 0
                         },
                         "retention_policy_distribution_cove": {}

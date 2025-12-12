@@ -915,13 +915,13 @@
                               "totalStorage": 4.30
                             },
                             "asset_type_distribution_cove": {
-                              "workstations": 34,
-                              "servers": 4,
+                              "physical": 28,
+                              "virtual": 10,
                               "others": 0
                             },
                             "devices_distribution_cove": {
-                              "physical": 28,
-                              "virtual": 10,
+                                "workstations": 34,
+                              "servers": 4,
                               "others": 0
                             },
                             "retention_policy_distribution_cove": {
