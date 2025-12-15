@@ -912,7 +912,7 @@
                         "charts": {
                             "total_devices_storage_summary_cove": {
                               "totalDevices": 38,
-                              "totalStorage": 4.30
+                              "used_storage": 4.30
                             },
                             "asset_type_distribution_cove": {
                               "physical": 28,
