@@ -401,20 +401,22 @@ class NinjaOneProcessor:
             total_storage_bytes = 0
             total_free_space_bytes = 0
             for volume in volumes:
-                if volume.get("deviceType") == "Local Disk":
-                    capacity = volume.get("capacity", 0)
-                    free_space = volume.get("freeSpace", 0)
+                # Check if volume has capacity and freeSpace (cross-platform: Windows, Linux, Mac)
+                capacity = volume.get("capacity")
+                free_space = volume.get("freeSpace")
+                if capacity and free_space:
                     total_storage_bytes += capacity
                     total_free_space_bytes += free_space
 
             formatted_device["storage_gb"] = self._bytes_to_gb(total_storage_bytes)
             formatted_device["free_space_gb"] = self._bytes_to_gb(total_free_space_bytes)
 
-            # Separate devices based on nodeClass
-            if node_class == "WINDOWS_SERVER":
+            # Separate devices based on nodeClass (check if "server" is in the string)
+            node_class_lower = node_class.lower()
+            if "server" in node_class_lower:
                 server_devices.append(formatted_device)
             else:
-                # All other devices (WINDOWS_WORKSTATION, MAC, LINUX, etc.) go to workstation_devices
+                # All other devices (workstations, desktops, etc.)
                 workstation_devices.append(formatted_device)
 
         return {
