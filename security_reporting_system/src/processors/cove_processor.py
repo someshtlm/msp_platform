@@ -75,8 +75,8 @@ class CoveProcessor:
 
             response = self.client.get_account_statistics(
                 customer_id=customer_id,
-                columns=["I1", "I14", "I32", "I81", "PN"],  # Name, Storage, OSType, Physical/Virtual, RetentionPolicy
-                totals=["SUM(I14)"],  # Total storage across all devices
+                columns=["I1", "I14", "I32", "I81", "PN", "GM", "G@"],  # Name, Storage, OSType, Physical/Virtual, RetentionPolicy, UserMailboxes, SharedMailboxes
+                totals=["SUM(I14)", "SUM(GM)", "SUM(G@)"],  # Total storage, user mailboxes, shared mailboxes
                 start_record=0,
                 records_count=100  # Get up to 100 devices
             )
@@ -121,18 +121,45 @@ class CoveProcessor:
         # ============================================================
         # 1. Total Storage Used (from totalStatistics)
         # Convert from bytes to TB (1 TB = 10^12 = 1,000,000,000,000 bytes)
+        # totalStatistics is array of objects: [{"SUM(G@)": "0"}, {"SUM(GM)": "0"}, {"SUM(I14)": "4188932699497"}]
         # ============================================================
         if total_statistics and len(total_statistics) > 0:
-            total_storage_str = total_statistics[0].get('SUM(I14)', '0')
+            # Search for keys in the array
+            total_storage_str = '0'
+            user_mailboxes_str = '0'
+            shared_mailboxes_str = '0'
+
+            for stat_obj in total_statistics:
+                if 'SUM(I14)' in stat_obj:
+                    total_storage_str = stat_obj['SUM(I14)']
+                if 'SUM(GM)' in stat_obj:
+                    user_mailboxes_str = stat_obj['SUM(GM)']
+                if 'SUM(G@)' in stat_obj:
+                    shared_mailboxes_str = stat_obj['SUM(G@)']
+
+            # Parse and convert storage to TB
             try:
                 total_storage_bytes = int(total_storage_str)
-                # Convert bytes to TB (Decimal: 1 TB = 10^12 bytes)
-                total_storage_tb = round(total_storage_bytes / 1_000_000_000_000, 2)  # Round to 2 decimal places
+                total_storage_tb = round(total_storage_bytes / 1_000_000_000_000, 2)  # 2 decimal places
                 metrics['total_storage_used'] = total_storage_tb
             except (ValueError, TypeError):
                 metrics['total_storage_used'] = 0
+
+            # Parse user mailboxes
+            try:
+                metrics['user_mailboxes'] = int(user_mailboxes_str)
+            except (ValueError, TypeError):
+                metrics['user_mailboxes'] = 0
+
+            # Parse shared mailboxes
+            try:
+                metrics['shared_mailboxes'] = int(shared_mailboxes_str)
+            except (ValueError, TypeError):
+                metrics['shared_mailboxes'] = 0
         else:
             metrics['total_storage_used'] = 0
+            metrics['user_mailboxes'] = 0
+            metrics['shared_mailboxes'] = 0
 
         # ============================================================
         # 2. Device Count (count of devices array)
@@ -207,6 +234,7 @@ class CoveProcessor:
         logger.info("Cove data processed successfully")
         logger.info(f"   Storage Used: {metrics['total_storage_used']} TB")
         logger.info(f"   Device Count: {metrics['device_count']}")
+        logger.info(f"   User Mailboxes: {metrics['user_mailboxes']}, Shared Mailboxes: {metrics['shared_mailboxes']}")
         logger.info(f"   Workstations: {device_dist['Workstation']}, Servers: {device_dist['Server']}")
 
         return {"cove_metrics": metrics}
@@ -221,6 +249,8 @@ class CoveProcessor:
         return {
             "total_storage_used": 0,
             "device_count": 0,
+            "user_mailboxes": 0,
+            "shared_mailboxes": 0,
             "device_distribution": {"Workstation": 0, "Server": 0, "Undefined": 0},
             "asset_distribution": {"Physical": 0, "Virtual": 0, "Undefined": 0},
             "retention_policy_distribution": {}

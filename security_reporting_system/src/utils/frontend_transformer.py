@@ -271,7 +271,9 @@ class FrontendTransformer:
                             frontend_json["Cove"] = {"charts": {}}
                         frontend_json["Cove"]["charts"]["total_devices_storage_summary_cove"] = {
                             "totalDevices": cove_metrics.get("device_count", 0) or 0,
-                            "used_storage": cove_metrics.get("total_storage_used", 0.0) or 0.0
+                            "used_storage": cove_metrics.get("total_storage_used", 0.0) or 0.0,
+                            "user_mailboxes": cove_metrics.get("user_mailboxes", 0) or 0,
+                            "shared_mailboxes": cove_metrics.get("shared_mailboxes", 0) or 0
                         }
 
                     # Chart 2: Asset Type Distribution (Physical/Virtual)
@@ -383,7 +385,9 @@ class FrontendTransformer:
                     "charts": {
                         "total_devices_storage_summary_cove": {
                             "totalDevices": 0,
-                            "used_storage": 0.0
+                            "used_storage": 0.0,
+                            "user_mailboxes": 0,
+                            "shared_mailboxes": 0
                         },
                         "asset_type_distribution_cove": {
                             "physical": 0,
