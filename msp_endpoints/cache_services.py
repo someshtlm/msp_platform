@@ -18,32 +18,26 @@ def is_cache_valid(checked_at_str: str, ttl_minutes: int = 30) -> bool:
     """
     Check if cached data is still valid based on TTL (Time-To-Live).
 
+    NOTE: Cache expiration is DISABLED - always returns True.
+    Cache will never expire based on time.
+
     Args:
         checked_at_str: ISO 8601 datetime string from database (e.g., "2025-01-15T10:30:00Z")
-        ttl_minutes: Cache validity period in minutes (default: 30)
+        ttl_minutes: Cache validity period in minutes (IGNORED - kept for backward compatibility)
 
     Returns:
-        True if cache is still valid, False if expired
+        Always returns True (cache never expires)
     """
     try:
-        # Parse the ISO datetime string
+        # Parse the ISO datetime string to check if it's valid
         checked_at = datetime.fromisoformat(checked_at_str.replace('Z', '+00:00'))
-        now = datetime.now(checked_at.tzinfo)  # Use same timezone
+        logger.info(f"✅ Cache valid - expiration disabled, last updated: {checked_at_str}")
 
-        # Calculate expiration time
-        expiration_time = checked_at + timedelta(minutes=ttl_minutes)
-
-        is_valid = now < expiration_time
-
-        if is_valid:
-            logger.info(f"✅ Cache valid - expires in {(expiration_time - now).total_seconds() / 60:.1f} minutes")
-        else:
-            logger.warning(f"⏰ Cache expired - {(now - expiration_time).total_seconds() / 60:.1f} minutes ago")
-
-        return is_valid
+        # Always return True - cache never expires based on time
+        return True
 
     except Exception as e:
-        logger.error(f"Error checking cache validity: {e}")
+        logger.error(f"Error parsing cache timestamp: {e}")
         return False
 
 
