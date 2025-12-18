@@ -914,7 +914,8 @@
                               "totalDevices": 38,
                               "used_storage": 4.30,
                                  "user_mailboxes": 21,
-                                "shared_mailboxes": 16
+                                "shared_mailboxes": 16,
+                                "onedrive_user_accounts": 15
                             },
                             "asset_type_distribution_cove": {
                               "physical": 28,
