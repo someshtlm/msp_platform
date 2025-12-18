@@ -33,13 +33,14 @@ class FrontendTransformer:
     def __init__(self):
         pass
 
-    def transform_to_frontend_json(self, full_data: Dict[str, Any], account_id: int = None) -> Dict[str, Any]:
+    def transform_to_frontend_json(self, full_data: Dict[str, Any], account_id: int = None, reporting_period: str = None) -> Dict[str, Any]:
         """
         Transform the full security assessment data into frontend-optimized JSON.
 
         Args:
             full_data: Complete data from SecurityAssessmentOrchestrator
             account_id: Account ID for filtering selected charts (optional)
+            reporting_period: Reporting period in "Month Year" format (e.g., "November 2024") (optional)
 
         Returns:
             Frontend-optimized JSON structure filtered by account's selected charts
@@ -60,7 +61,7 @@ class FrontendTransformer:
             frontend_json = {}
 
             try:
-                frontend_json["organization"] = self._extract_organization_info(full_data)
+                frontend_json["organization"] = self._extract_organization_info(full_data, reporting_period)
             except Exception as e:
                 logger.warning(f"Failed to extract organization info: {e}")
                 frontend_json["organization"] = {"id": "unknown", "name": "Unknown Organization"}
@@ -163,69 +164,73 @@ class FrontendTransformer:
                         frontend_json["NinjaOne"]["tables"] = {}
                     frontend_json["NinjaOne"]["tables"]["device_inventory_server"] = table_data.get("device_inventory_server", [])
 
-                if is_chart_selected('autotask', 'daily_tickets_trend') and "daily_tickets_trend" in charts_data:
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["daily_tickets_trend"] = charts_data["daily_tickets_trend"]
+                # Only add Autotask charts if autotask_metrics exists in full_data
+                if "autotask_metrics" in full_data:
+                    if is_chart_selected('autotask', 'daily_tickets_trend') and "daily_tickets_trend" in charts_data:
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["daily_tickets_trend"] = charts_data["daily_tickets_trend"]
 
-                if is_chart_selected('autotask', 'monthly_tickets_by_type') and "monthly_tickets_by_type" in charts_data:
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["monthly_tickets_by_type"] = charts_data["monthly_tickets_by_type"]
+                    if is_chart_selected('autotask', 'monthly_tickets_by_type') and "monthly_tickets_by_type" in charts_data:
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["monthly_tickets_by_type"] = charts_data["monthly_tickets_by_type"]
 
-                if is_chart_selected('autotask', 'open_tickets_by_issue_type') and "open_tickets_by_issue_type" in charts_data:
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["open_tickets_by_issue_type"] = charts_data["open_tickets_by_issue_type"]
+                    if is_chart_selected('autotask', 'open_tickets_by_issue_type') and "open_tickets_by_issue_type" in charts_data:
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["open_tickets_by_issue_type"] = charts_data["open_tickets_by_issue_type"]
 
-                if is_chart_selected('autotask', 'open_ticket_priority_distribution') and "open_ticket_priority_distribution" in charts_data:
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["open_ticket_priority_distribution"] = charts_data["open_ticket_priority_distribution"]
+                    if is_chart_selected('autotask', 'open_ticket_priority_distribution') and "open_ticket_priority_distribution" in charts_data:
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["open_ticket_priority_distribution"] = charts_data["open_ticket_priority_distribution"]
 
-                if is_chart_selected('autotask', 'sla_performance') and "sla_performance" in charts_data:
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["sla_performance"] = charts_data["sla_performance"]
+                    if is_chart_selected('autotask', 'sla_performance') and "sla_performance" in charts_data:
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["sla_performance"] = charts_data["sla_performance"]
 
-                if is_chart_selected('autotask', 'tickets_by_contact'):
-                    if "Autotask" not in frontend_json:
-                        frontend_json["Autotask"] = {"charts": {}}
-                    frontend_json["Autotask"]["charts"]["tickets_by_contact"] = {
-                        "tickets_by_contact_summary": {
-                            "contacts_summary": contacts_summary if contacts_summary else {
-                                "contacts_count": 0,
-                                "total_tickets": 0,
-                                "top_contact": "Unknown"
-                            }
-                        },
-                        "data": contacts_list
-                    }
+                    if is_chart_selected('autotask', 'tickets_by_contact'):
+                        if "Autotask" not in frontend_json:
+                            frontend_json["Autotask"] = {"charts": {}}
+                        frontend_json["Autotask"]["charts"]["tickets_by_contact"] = {
+                            "tickets_by_contact_summary": {
+                                "contacts_summary": contacts_summary if contacts_summary else {
+                                    "contacts_count": 0,
+                                    "total_tickets": 0,
+                                    "top_contact": "Unknown"
+                                }
+                            },
+                            "data": contacts_list
+                        }
 
-                if is_chart_selected('connectsecure', 'asset_type_distribution') and "asset_type_distribution" in charts_data:
-                    if "ConnectSecure" not in frontend_json:
-                        frontend_json["ConnectSecure"] = {"charts": {}}
-                    frontend_json["ConnectSecure"]["charts"]["asset_type_distribution"] = charts_data["asset_type_distribution"]
+                # Only add ConnectSecure charts if connectsecure_metrics exists in full_data
+                if "connectsecure_metrics" in full_data:
+                    if is_chart_selected('connectsecure', 'asset_type_distribution') and "asset_type_distribution" in charts_data:
+                        if "ConnectSecure" not in frontend_json:
+                            frontend_json["ConnectSecure"] = {"charts": {}}
+                        frontend_json["ConnectSecure"]["charts"]["asset_type_distribution"] = charts_data["asset_type_distribution"]
 
-                if is_chart_selected('connectsecure', 'operating_system_distribution') and "operating_system_distribution" in charts_data:
-                    if "ConnectSecure" not in frontend_json:
-                        frontend_json["ConnectSecure"] = {"charts": {}}
-                    frontend_json["ConnectSecure"]["charts"]["operating_system_distribution"] = charts_data["operating_system_distribution"]
+                    if is_chart_selected('connectsecure', 'operating_system_distribution') and "operating_system_distribution" in charts_data:
+                        if "ConnectSecure" not in frontend_json:
+                            frontend_json["ConnectSecure"] = {"charts": {}}
+                        frontend_json["ConnectSecure"]["charts"]["operating_system_distribution"] = charts_data["operating_system_distribution"]
 
-                if is_chart_selected('connectsecure', 'security_risk_score') and "security_risk_score" in charts_data:
-                    if "ConnectSecure" not in frontend_json:
-                        frontend_json["ConnectSecure"] = {"charts": {}}
-                    frontend_json["ConnectSecure"]["charts"]["security_risk_score"] = charts_data["security_risk_score"]
+                    if is_chart_selected('connectsecure', 'security_risk_score') and "security_risk_score" in charts_data:
+                        if "ConnectSecure" not in frontend_json:
+                            frontend_json["ConnectSecure"] = {"charts": {}}
+                        frontend_json["ConnectSecure"]["charts"]["security_risk_score"] = charts_data["security_risk_score"]
 
-                if is_chart_selected('connectsecure', 'vulnerability_severity') and "vulnerability_severity" in charts_data:
-                    if "ConnectSecure" not in frontend_json:
-                        frontend_json["ConnectSecure"] = {"charts": {}}
-                    frontend_json["ConnectSecure"]["charts"]["vulnerability_severity"] = charts_data["vulnerability_severity"]
+                    if is_chart_selected('connectsecure', 'vulnerability_severity') and "vulnerability_severity" in charts_data:
+                        if "ConnectSecure" not in frontend_json:
+                            frontend_json["ConnectSecure"] = {"charts": {}}
+                        frontend_json["ConnectSecure"]["charts"]["vulnerability_severity"] = charts_data["vulnerability_severity"]
 
-                if is_chart_selected('connectsecure', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
-                    if "ConnectSecure" not in frontend_json:
-                        frontend_json["ConnectSecure"] = {"charts": {}}
-                    frontend_json["ConnectSecure"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
+                    if is_chart_selected('connectsecure', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
+                        if "ConnectSecure" not in frontend_json:
+                            frontend_json["ConnectSecure"] = {"charts": {}}
+                        frontend_json["ConnectSecure"]["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
 
                 # Bitdefender charts
                 bitdefender_metrics = full_data.get("bitdefender_metrics", {})
@@ -256,6 +261,55 @@ class FrontendTransformer:
                         if "Bitdefender" not in frontend_json:
                             frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
                         frontend_json["Bitdefender"]["tables"]["networkinventory_bitdefender"] = bd_tables["networkinventory_bitdefender"]
+
+                # Cove charts
+                cove_metrics = full_data.get("cove_metrics", {})
+                if cove_metrics:
+                    # Chart 1: Total Devices & Storage Summary
+                    if is_chart_selected('cove', 'total_devices_storage_summary_cove'):
+                        if "Cove" not in frontend_json:
+                            frontend_json["Cove"] = {"charts": {}}
+                        frontend_json["Cove"]["charts"]["total_devices_storage_summary_cove"] = {
+                            "totalDevices": cove_metrics.get("device_count", 0) or 0,
+                            "used_storage": cove_metrics.get("total_storage_used", 0.0) or 0.0,
+                            "user_mailboxes": cove_metrics.get("user_mailboxes", 0) or 0,
+                            "shared_mailboxes": cove_metrics.get("shared_mailboxes", 0) or 0,
+                            "onedrive_user_accounts": cove_metrics.get("onedrive_user_accounts", 0) or 0
+                        }
+
+                    # Chart 2: Asset Type Distribution (Physical/Virtual)
+                    if is_chart_selected('cove', 'asset_type_distribution_cove'):
+                        if "Cove" not in frontend_json:
+                            frontend_json["Cove"] = {"charts": {}}
+                        asset_dist = cove_metrics.get("asset_distribution", {})
+                        frontend_json["Cove"]["charts"]["asset_type_distribution_cove"] = {
+                            "physical": asset_dist.get("Physical", 0) or 0,
+                            "virtual": asset_dist.get("Virtual", 0) or 0,
+                            "others": asset_dist.get("Undefined", 0) or 0
+                        }
+
+                    # Chart 3: Devices Distribution (Workstation/Server)
+                    if is_chart_selected('cove', 'devices_distribution_cove'):
+                        if "Cove" not in frontend_json:
+                            frontend_json["Cove"] = {"charts": {}}
+                        device_dist = cove_metrics.get("device_distribution", {})
+                        frontend_json["Cove"]["charts"]["devices_distribution_cove"] = {
+                            "workstations": device_dist.get("Workstation", 0) or 0,
+                            "servers": device_dist.get("Server", 0) or 0,
+                            "others": device_dist.get("Undefined", 0) or 0
+                        }
+
+                    # Chart 4: Retention Policy Distribution
+                    if is_chart_selected('cove', 'retention_policy_distribution_cove'):
+                        if "Cove" not in frontend_json:
+                            frontend_json["Cove"] = {"charts": {}}
+                        retention_dist = cove_metrics.get("retention_policy_distribution", {})
+                        # Ensure all values are integers and handle None/empty
+                        cleaned_retention = {}
+                        for policy, count in retention_dist.items():
+                            if policy:  # Skip empty/None keys
+                                cleaned_retention[policy] = count or 0
+                        frontend_json["Cove"]["charts"]["retention_policy_distribution_cove"] = cleaned_retention or {}
 
             except Exception as e:
                 logger.warning(f"Failed to extract chart/table data: {e}")
@@ -328,6 +382,28 @@ class FrontendTransformer:
                         "networkinventory_bitdefender": []
                     }
                 }
+                frontend_json["Cove"] = {
+                    "charts": {
+                        "total_devices_storage_summary_cove": {
+                            "totalDevices": 0,
+                            "used_storage": 0.0,
+                            "user_mailboxes": 0,
+                            "shared_mailboxes": 0,
+                            "onedrive_user_accounts": 0
+                        },
+                        "asset_type_distribution_cove": {
+                            "physical": 0,
+                            "virtual": 0,
+                            "others": 0
+                        },
+                        "devices_distribution_cove": {
+                            "workstations": 0,
+                            "servers": 0,
+                            "others": 0
+                        },
+                        "retention_policy_distribution_cove": {}
+                    }
+                }
 
 
 
@@ -346,9 +422,15 @@ class FrontendTransformer:
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return self._create_error_response(str(e))
 
-    def _extract_organization_info(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_organization_info(self, data: Dict[str, Any], reporting_period: str = None) -> Dict[str, Any]:
         """Extract organization information."""
         execution_info = data.get("execution_info", {})
+
+        # Use provided reporting_period, fallback to execution_info, then current month
+        if not reporting_period:
+            reporting_period = execution_info.get("reporting_period")
+        if not reporting_period:
+            reporting_period = datetime.now().strftime("%B %Y")
 
         return {
             "id": execution_info.get("organization_id", "unknown"),
@@ -356,7 +438,7 @@ class FrontendTransformer:
             "report_date": execution_info.get("timestamp", datetime.now().isoformat()),
             "created_by": "Security Reporting System",
             "company": "TeamLogic IT",
-            "reporting_period": datetime.now().strftime("%B %Y")
+            "reporting_period": reporting_period
         }
 
     def _extract_summary_metrics(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1267,34 +1349,26 @@ class FrontendTransformer:
         if "\\" in user:
             user = user.split("\\")[-1]  # Remove domain prefix like "SKG\"
 
-        # Calculate age from created timestamp
-        created_timestamp = device.get("created")
-        age_display = "Unknown"
-        age_category = "Unknown"
-        if created_timestamp:
+        # Age calculation using warranty.startDate from NinjaOne
+        # Get warranty start date from references.warranty.startDate
+        warranty_start = device.get("references", {}).get("warranty", {}).get("startDate", 0)
+        age_value = None  # Default to None if no warranty data
+
+        if warranty_start and warranty_start != 0:
             try:
-                created_date = datetime.fromtimestamp(created_timestamp)
-                age_years = (datetime.now() - created_date).days / 365.25
+                warranty_start_date = datetime.fromtimestamp(warranty_start)
+                age_years = (datetime.now() - warranty_start_date).days / 365.25
 
                 # Round to 1 decimal place
                 age_rounded = round(age_years, 1)
 
-                # Format age display with proper singular/plural
-                if age_rounded == 1.0:
-                    age_display = "1.0 year"
-                else:
-                    age_display = f"{age_rounded:.1f} years"
-
-                # Categorize age into ranges
-                if age_rounded > 6:
-                    age_category = ">6 years"
-                elif age_rounded >= 4:
-                    age_category = "4-6 years"
-                else:
-                    age_category = "<4 years"
+                # Return numeric value only (no "years" string)
+                age_value = age_rounded
             except:
-                age_display = "Unknown"
-                age_category = "Unknown"
+                age_value = None
+        else:
+            # If warranty.startDate not present or is 0, set age to None
+            age_value = None
 
         # Calculate free storage from raw data
         free_storage_gb = device.get("free_space_gb", 0)
@@ -1321,8 +1395,7 @@ class FrontendTransformer:
             "cpu": device.get("cpu", "Unknown"),
             "total_storage": f"{device.get('storage_gb', 0):.1f}GB",
             "free_storage": f"{free_storage_gb:.1f}GB",
-            "age": age_display,
-            "age_category": age_category,
+            "age": age_value,  # Numeric value only (e.g., 2.4, 5, 6.8), 0 if no warranty data
             "location": location
         }
 

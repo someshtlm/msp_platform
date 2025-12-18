@@ -67,25 +67,76 @@ class MonthSelector:
 
     def get_month_by_name(self, month_name: str) -> MonthInfo:
         """
-        Get month information by month name (e.g., "August", "July")
+        Get month information by month_year format (e.g., "november_2024")
 
         Args:
-            month_name: Name of the month to get info for
+            month_name: Month in 'month_year' format (e.g., "november_2024", "january_2025")
+                       Must be lowercase month name, underscore, then 4-digit year
 
         Returns:
             MonthInfo object for the specified month
 
         Raises:
-            ValueError: If month name is not found in available months
+            ValueError: If month_name format is invalid or month doesn't exist
         """
-        available_months = self.get_available_months()
+        # Validate format: must contain underscore
+        if '_' not in month_name:
+            raise ValueError(
+                f"Invalid month format: '{month_name}'. "
+                f"Expected format: 'monthlowercase_year' (e.g., 'november_2024')"
+            )
 
-        for month in available_months:
-            if month.month_name.lower() == month_name.lower():
-                return month
+        # Parse month_year format
+        parts = month_name.split('_')
+        if len(parts) != 2:
+            raise ValueError(
+                f"Invalid month format: '{month_name}'. "
+                f"Expected format: 'monthlowercase_year' (e.g., 'november_2024')"
+            )
 
-        available_names = [m.month_name for m in available_months]
-        raise ValueError(f"Month '{month_name}' not found. Available months: {available_names}")
+        month_part = parts[0].lower()
+        year_part = parts[1]
+
+        # Validate year is numeric and 4 digits
+        if not year_part.isdigit() or len(year_part) != 4:
+            raise ValueError(f"Invalid year: '{year_part}'. Year must be a 4-digit number.")
+
+        year = int(year_part)
+
+        # Find month number from month name
+        try:
+            month_number = next(
+                i + 1 for i, name in enumerate(self.month_names)
+                if name.lower() == month_part
+            )
+            month_name_capitalized = self.month_names[month_number - 1]
+        except StopIteration:
+            raise ValueError(
+                f"Invalid month name: '{month_part}'. "
+                f"Valid months: {', '.join([m.lower() for m in self.month_names])}"
+            )
+
+        # Calculate timestamps for the specified month and year
+        first_day = datetime(year, month_number, 1)
+
+        # Get last day of month
+        if month_number == 12:
+            last_day = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day = datetime(year, month_number + 1, 1) - timedelta(days=1)
+
+        # Create timestamps (start of day for first day, end of day for last day)
+        start_timestamp = first_day.timestamp()
+        end_timestamp = (last_day.replace(hour=23, minute=59, second=59)).timestamp()
+
+        return MonthInfo(
+            month_name=month_name_capitalized,
+            month_number=month_number,
+            year=year,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp,
+            display_name=f"{month_name_capitalized} {year}"
+        )
 
     def get_month_timestamps(self, month_name: str = None) -> Tuple[float, float]:
         """

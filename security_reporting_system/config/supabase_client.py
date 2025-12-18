@@ -110,7 +110,8 @@ class SupabaseCredentialManager:
                 'ninjaone': 'ninjaone_org_id',
                 'autotask': 'autotask_id',
                 'connectsecure': 'connectsecure_id',
-                'bitdefender': 'bitdefender_company_id'
+                'bitdefender': 'bitdefender_company_id',
+                'cove': 'cove_customer_id'
             }
 
             # Extract platform IDs from table query response

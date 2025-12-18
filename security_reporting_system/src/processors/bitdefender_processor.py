@@ -144,10 +144,10 @@ class BitdefenderProcessor:
         Convert month name to MM/YYYY format
 
         Args:
-            month_name: Month name like "October", "November", etc.
+            month_name: Month name in format "october_2024" or "november_2025"
 
         Returns:
-            String in MM/YYYY format (e.g., "10/2025") - uses current year
+            String in MM/YYYY format (e.g., "10/2024", "11/2025")
         """
         if not month_name:
             current_date = datetime.now()
@@ -159,17 +159,26 @@ class BitdefenderProcessor:
             "september": "09", "october": "10", "november": "11", "december": "12"
         }
 
-        month_lower = month_name.lower()
-        month_num = month_mapping.get(month_lower)
+        # Parse new format: "october_2024" or "november_2025"
+        try:
+            parts = month_name.lower().split('_')
+            if len(parts) == 2:
+                month_name_part = parts[0]
+                year_part = parts[1]
+                month_num = month_mapping.get(month_name_part)
 
-        if not month_num:
-            logger.warning(f"Unknown month name: {month_name}, using current month")
+                if month_num and len(year_part) == 4:
+                    result = f"{month_num}/{year_part}"
+                    logger.info(f"Converted month '{month_name}' to Bitdefender format: {result}")
+                    return result
+
+            # If parsing fails, log warning and use current month
+            logger.warning(f"Invalid month format: {month_name}, expected 'october_2024'. Using current month")
             return datetime.now().strftime("%m/%Y")
 
-        current_year = datetime.now().strftime("%Y")
-        result = f"{month_num}/{current_year}"
-        logger.info(f"Converted month '{month_name}' to Bitdefender format: {result}")
-        return result
+        except Exception as e:
+            logger.warning(f"Error parsing month '{month_name}': {e}. Using current month")
+            return datetime.now().strftime("%m/%Y")
 
     def _process_risk_score(self, company_details: Dict[str, Any]) -> Dict[str, Any]:
         """Extract and format risk score data"""

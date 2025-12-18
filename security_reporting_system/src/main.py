@@ -22,12 +22,14 @@ try:
     from security_reporting_system.src.processors.autotask_processor import AutotaskProcessor
     from security_reporting_system.src.processors.connectsecure_processor import ConnectSecureProcessor
     from security_reporting_system.src.processors.bitdefender_processor import BitdefenderProcessor
+    from security_reporting_system.src.processors.cove_processor import CoveProcessor
     from security_reporting_system.src.utils.frontend_transformer import FrontendTransformer
 except ImportError:
     from src.processors.ninjaone_processor import NinjaOneProcessor
     from src.processors.autotask_processor import AutotaskProcessor
     from src.processors.connectsecure_processor import ConnectSecureProcessor
     from src.processors.bitdefender_processor import BitdefenderProcessor
+    from src.processors.cove_processor import CoveProcessor
     from src.utils.frontend_transformer import FrontendTransformer
 
 # Import PDF report generator - UNCHANGED
@@ -77,7 +79,7 @@ def fetch_ninjaone_data(ninja_client=None, use_time_filter: bool = True, month_n
     cache_key = f"{org_id}_{month_name or 'default'}"
 
     # DISABLED CACHING for PDF generation to prevent cross-organization data contamination
-    logger.debug(f"🔄 Fetching fresh NinjaOne data for org {org_id}, month: {month_name or 'default'}")
+    logger.debug(f"Fetching fresh NinjaOne data for org {org_id}, month: {month_name or 'default'}")
 
     if ninja_client:
         # Extract org_id from the ninja_client to ensure processor uses correct organization
@@ -85,13 +87,13 @@ def fetch_ninjaone_data(ninja_client=None, use_time_filter: bool = True, month_n
         processor = NinjaOneProcessor(ninjaone_org_id=org_id)
         processor.client = ninja_client  # Use the same client instance
         _ninjaone_cache = processor.fetch_all_data(use_time_filter=use_time_filter, month_name=month_name)
-        logger.debug(f"✅ Used ninja_client with org_id: {org_id}")
+        logger.debug(f"Used ninja_client with org_id: {org_id}")
     else:
         processor = NinjaOneProcessor()
         _ninjaone_cache = processor.fetch_all_data(use_time_filter=use_time_filter, month_name=month_name)
-        logger.debug("✅ Used default processor configuration")
+        logger.debug("Used default processor configuration")
 
-    logger.debug("✅ NinjaOne data fetched fresh (no caching)")
+    logger.debug("NinjaOne data fetched fresh (no caching)")
     return _ninjaone_cache
 
 async def fetch_autotask_data(autotask_client=None, company_id: Optional[int] = None, month_name: str = None) -> Dict[str, Any]:
@@ -104,18 +106,18 @@ async def fetch_autotask_data(autotask_client=None, company_id: Optional[int] = 
     global _autotask_cache
 
     # DISABLED CACHING for PDF generation to prevent cross-organization data contamination
-    logger.debug(f"🔄 Fetching fresh Autotask data for company {company_id}")
+    logger.debug(f"Fetching fresh Autotask data for company {company_id}")
 
     processor = AutotaskProcessor()
     _autotask_cache = await processor.fetch_all_data(company_id=company_id, month_name=month_name)
-    logger.debug("✅ Autotask data fetched fresh (no caching)")
+    logger.debug(" Autotask data fetched fresh (no caching)")
 
     return _autotask_cache
 
 
 def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Dict[str, Any]] = None, month_name: str = None, connectsecure_company_id: str = None) -> Dict[str, Any]:
 
-    print("🔍 DEBUG: generate_final_output called")
+    print("DEBUG: generate_final_output called")
 
     # Process NinjaOne data
     ninjaone_processor = NinjaOneProcessor()
@@ -130,7 +132,7 @@ def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Di
     # ADDED: Process ConnectSecure data
     if connectsecure_company_id:
         try:
-            print(f"🔍 DEBUG: Adding ConnectSecure data for company {connectsecure_company_id}")
+            print(f"DEBUG: Adding ConnectSecure data for company {connectsecure_company_id}")
             connectsecure_processor = ConnectSecureProcessor(connectsecure_company_id=connectsecure_company_id)
 
             # Fetch ConnectSecure data using the working endpoint with month filtering
@@ -143,17 +145,17 @@ def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Di
                 # Add to final output
                 final_output.update(connectsecure_processed)
 
-                print(f"🔍 DEBUG: ConnectSecure data added - {len(connectsecure_raw.get('assets', []))} assets")
-                print(f"🔍 DEBUG: Final output now has keys: {list(final_output.keys())}")
+                print(f"DEBUG: ConnectSecure data added - {len(connectsecure_raw.get('assets', []))} assets")
+                print(f"DEBUG: Final output now has keys: {list(final_output.keys())}")
             else:
-                print("🔍 DEBUG: No ConnectSecure assets found")
+                print(" DEBUG: No ConnectSecure assets found")
 
         except Exception as e:
-            print(f"🔍 DEBUG: ConnectSecure processing failed for company {connectsecure_company_id}: {e}")
+            print(f"DEBUG: ConnectSecure processing failed for company {connectsecure_company_id}: {e}")
             # Don't fail the entire report if ConnectSecure fails
             pass
     else:
-        print("🔍 DEBUG: No ConnectSecure company_id provided, skipping ConnectSecure data")
+        print(" DEBUG: No ConnectSecure company_id provided, skipping ConnectSecure data")
 
     return final_output
 
@@ -177,6 +179,8 @@ class SecurityAssessmentOrchestrator:
         self.ninjaone_processor = None
         self.autotask_processor = None
         self.connectsecure_processor = None
+        self.bitdefender_processor = None
+        self.cove_processor = None
 
         logger.info(f"SecurityAssessmentOrchestrator initialized with account_id: {account_id}, org_id: {org_id}")
 
@@ -208,12 +212,14 @@ class SecurityAssessmentOrchestrator:
         autotask_company_id = org_data.get('autotask_id')
         connectsecure_company_id = org_data.get('connectsecure_id')
         bitdefender_company_id = org_data.get('bitdefender_company_id')
+        cove_customer_id = org_data.get('cove_customer_id')
 
         logger.info(f"Organization: {org_data.get('name', 'Unknown')} (ID: {self.org_id})")
         logger.info(f"  NinjaOne Org ID: {ninjaone_org_id}")
         logger.info(f"  Autotask Company ID: {autotask_company_id}")
         logger.info(f"  ConnectSecure Company ID: {connectsecure_company_id}")
         logger.info(f"  Bitdefender Company ID: {bitdefender_company_id}")
+        logger.info(f"  Cove Customer ID: {cove_customer_id}")
 
         if ninjaone_org_id:
             self.ninjaone_processor = NinjaOneProcessor(
@@ -248,11 +254,21 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"No Bitdefender company_id found - Bitdefender data will be skipped")
             self.bitdefender_processor = None
 
+        if cove_customer_id:
+            self.cove_processor = CoveProcessor(
+                account_id=self.account_id,
+                cove_customer_id=cove_customer_id
+            )
+        else:
+            logger.warning(f"No Cove customer_id found - Cove data will be skipped")
+            self.cove_processor = None
+
         return {
             'ninjaone_org_id': ninjaone_org_id,
             'autotask_company_id': autotask_company_id,
             'connectsecure_company_id': connectsecure_company_id,
             'bitdefender_company_id': bitdefender_company_id,
+            'cove_customer_id': cove_customer_id,
             'organization_name': org_data.get('name', 'Unknown')
         }
 
@@ -438,13 +454,30 @@ class SecurityAssessmentOrchestrator:
                 logger.error(traceback.format_exc())
                 return None, e
 
+        async def fetch_cove():
+            if not self.cove_processor:
+                logger.info("Skipping Cove - not configured")
+                return None, None
+            logger.info("Fetching Cove data...")
+            try:
+                raw = await asyncio.to_thread(
+                    self.cove_processor.fetch_all_data,
+                    self.cove_processor.customer_id
+                )
+                logger.info("Cove data fetched successfully")
+                return raw, None
+            except Exception as e:
+                logger.warning(f"Failed to fetch Cove data: {e}")
+                return None, e
+
         logger.info("Starting PARALLEL data fetching from all platforms...")
 
-        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result = await asyncio.gather(
+        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result = await asyncio.gather(
             fetch_ninjaone(),
             fetch_autotask(),
             fetch_connectsecure(),
-            fetch_bitdefender()
+            fetch_bitdefender(),
+            fetch_cove()
         )
 
         logger.info("Processing fetched data...")
@@ -502,6 +535,18 @@ class SecurityAssessmentOrchestrator:
         else:
             logger.info("=== BITDEFENDER: NO DATA (PROCESSOR NOT CONFIGURED) ===")
 
+        cove_raw, cove_error = cove_result
+        if cove_raw and not cove_error:
+            logger.info("Processing Cove data...")
+            cove_processed = self.cove_processor.process_all_data(cove_raw)
+            final_data.update(cove_processed)
+            if "execution_info" in final_data:
+                final_data["execution_info"]["data_sources"].append("Cove")
+            logger.info("Cove data processed successfully")
+        elif cove_error:
+            logger.warning(f"Cove fetch failed: {cove_error}")
+            logger.info("Continuing with available data sources...")
+
         return final_data
 
     async def test_all_connections(self) -> Dict[str, bool]:
@@ -536,6 +581,15 @@ class SecurityAssessmentOrchestrator:
         else:
             results['connectsecure'] = False
 
+        if self.cove_processor:
+            try:
+                results['cove'] = self.cove_processor.test_connection()
+            except Exception as e:
+                logger.error(f"Cove connection test failed: {e}")
+                results['cove'] = False
+        else:
+            results['cove'] = False
+
         return results
 
 
@@ -557,7 +611,7 @@ async def main() -> None:
     parser.add_argument('--credential-id', type=str, default='4ffdf31a-9ea7-4962-a8ff-4ef440c793f3',
                         help='[DEPRECATED] Credential ID for Supabase lookup. Use --account-id instead.')
     parser.add_argument('--month', type=str,
-                        help='Specific month for report generation (e.g., "August", "July", "June") or "6 months" for Autotask 6-month aggregated data. Defaults to previous month')
+                        help='Specific month for report generation in month_year format (e.g., "november_2024", "december_2024"). Defaults to previous month')
     parser.add_argument('--list-months', action='store_true',
                         help='List available months for report generation and exit')
     parser.add_argument('--test-connections', action='store_true',
@@ -576,9 +630,11 @@ async def main() -> None:
 
         print("\n=== Available Months for Report Generation ===")
         for month in available_months:
-            print(f"  • {month['display_name']} (use --month \"{month['name']}\")")
+            month_lowercase = month['name'].lower()
+            month_year_format = f"{month_lowercase}_{month['year']}"
+            print(f"  • {month['display_name']} (use --month \"{month_year_format}\")")
         print("\nExample usage:")
-        print("  python src/main.py --month \"August\" --output pdf")
+        print("  python src/main.py --month \"november_2024\" --output pdf")
         return
 
     # Handle connection testing
@@ -647,11 +703,11 @@ async def main() -> None:
 
         # NEW: Use account_id and org_id if both are provided
         if args.account_id and args.org_id:
-            logger.info(f"✅ Using NEW credential system: account_id={args.account_id}, org_id={args.org_id}")
+            logger.info(f" Using NEW credential system: account_id={args.account_id}, org_id={args.org_id}")
             final_output = await orchestrator.collect_all_data_with_org_id(args.month)
         # OLD: Fallback to ninjaone_org_id method
         else:
-            logger.warning("⚠️ Using DEPRECATED ninjaone_org_id method. Please migrate to --account-id and --org-id.")
+            logger.warning("Using DEPRECATED ninjaone_org_id method. Please migrate to --account-id and --org-id.")
             final_output = await orchestrator.collect_all_data_for_org(args.ninjaone_org_id, args.month)
 
         end_time = datetime.now()
@@ -682,8 +738,24 @@ async def main() -> None:
 
         if args.output == 'frontend':
             logger.info("Generating frontend-optimized JSON...")
+
+            # Convert month parameter to "November 2024" format for reporting_period
+            reporting_period = None
+            if args.month:
+                try:
+                    parts = args.month.split('_')
+                    month_name = parts[0].capitalize()
+                    year = parts[1]
+                    reporting_period = f"{month_name} {year}"
+                except:
+                    pass
+
             transformer = FrontendTransformer()
-            frontend_json = transformer.transform_to_frontend_json(final_output, account_id=args.account_id)
+            frontend_json = transformer.transform_to_frontend_json(
+                final_output,
+                account_id=args.account_id,
+                reporting_period=reporting_period
+            )
 
             frontend_output = json.dumps(frontend_json, indent=2, default=str)
             print(frontend_output)  # Print to console
