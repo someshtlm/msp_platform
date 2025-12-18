@@ -175,11 +175,12 @@ class CoveAPIClient:
             PN  = Retention Policy
             GM  = Protected User Mailboxes
             G@  = Protected Shared Mailboxes
+            JM  = OneDrive User Accounts
 
         Args:
             customer_id: Cove customer ID from organization_integrations table
-            columns: List of column codes (e.g., ["I1", "I14", "I32", "I81", "PN", "GM", "G@"])
-            totals: Optional list of aggregations (e.g., ["SUM(I14)", "SUM(GM)", "SUM(G@)"])
+            columns: List of column codes (e.g., ["I1", "I14", "I32", "I81", "PN", "GM", "G@", "JM"])
+            totals: Optional list of aggregations (e.g., ["SUM(I14)", "SUM(GM)", "SUM(G@)", "SUM(JM)"])
             start_record: Start record number for pagination (default: 0)
             records_count: Number of records to retrieve (default: 100)
 
@@ -189,8 +190,8 @@ class CoveAPIClient:
         Example:
             >>> client.get_account_statistics(
             ...     customer_id="2641536",
-            ...     columns=["I1", "I14", "I32", "I81", "PN", "GM", "G@"],
-            ...     totals=["SUM(I14)", "SUM(GM)", "SUM(G@)"],
+            ...     columns=["I1", "I14", "I32", "I81", "PN", "GM", "G@", "JM"],
+            ...     totals=["SUM(I14)", "SUM(GM)", "SUM(G@)", "SUM(JM)"],
             ...     start_record=0,
             ...     records_count=100
             ... )

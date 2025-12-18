@@ -273,7 +273,8 @@ class FrontendTransformer:
                             "totalDevices": cove_metrics.get("device_count", 0) or 0,
                             "used_storage": cove_metrics.get("total_storage_used", 0.0) or 0.0,
                             "user_mailboxes": cove_metrics.get("user_mailboxes", 0) or 0,
-                            "shared_mailboxes": cove_metrics.get("shared_mailboxes", 0) or 0
+                            "shared_mailboxes": cove_metrics.get("shared_mailboxes", 0) or 0,
+                            "onedrive_user_accounts": cove_metrics.get("onedrive_user_accounts", 0) or 0
                         }
 
                     # Chart 2: Asset Type Distribution (Physical/Virtual)
@@ -387,7 +388,8 @@ class FrontendTransformer:
                             "totalDevices": 0,
                             "used_storage": 0.0,
                             "user_mailboxes": 0,
-                            "shared_mailboxes": 0
+                            "shared_mailboxes": 0,
+                            "onedrive_user_accounts": 0
                         },
                         "asset_type_distribution_cove": {
                             "physical": 0,

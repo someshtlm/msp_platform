@@ -75,8 +75,8 @@ class CoveProcessor:
 
             response = self.client.get_account_statistics(
                 customer_id=customer_id,
-                columns=["I1", "I14", "I32", "I81", "PN", "GM", "G@"],  # Name, Storage, OSType, Physical/Virtual, RetentionPolicy, UserMailboxes, SharedMailboxes
-                totals=["SUM(I14)", "SUM(GM)", "SUM(G@)"],  # Total storage, user mailboxes, shared mailboxes
+                columns=["I1", "I14", "I32", "I81", "PN", "GM", "G@", "JM"],  # Name, Storage, OSType, Physical/Virtual, RetentionPolicy, UserMailboxes, SharedMailboxes, OneDriveAccounts
+                totals=["SUM(I14)", "SUM(GM)", "SUM(G@)", "SUM(JM)"],  # Total storage, user mailboxes, shared mailboxes, onedrive accounts
                 start_record=0,
                 records_count=100  # Get up to 100 devices
             )
@@ -128,6 +128,7 @@ class CoveProcessor:
             total_storage_str = '0'
             user_mailboxes_str = '0'
             shared_mailboxes_str = '0'
+            onedrive_accounts_str = '0'
 
             for stat_obj in total_statistics:
                 if 'SUM(I14)' in stat_obj:
@@ -136,6 +137,8 @@ class CoveProcessor:
                     user_mailboxes_str = stat_obj['SUM(GM)']
                 if 'SUM(G@)' in stat_obj:
                     shared_mailboxes_str = stat_obj['SUM(G@)']
+                if 'SUM(JM)' in stat_obj:
+                    onedrive_accounts_str = stat_obj['SUM(JM)']
 
             # Parse and convert storage to TB
             try:
@@ -156,10 +159,17 @@ class CoveProcessor:
                 metrics['shared_mailboxes'] = int(shared_mailboxes_str)
             except (ValueError, TypeError):
                 metrics['shared_mailboxes'] = 0
+
+            # Parse OneDrive user accounts
+            try:
+                metrics['onedrive_user_accounts'] = int(onedrive_accounts_str)
+            except (ValueError, TypeError):
+                metrics['onedrive_user_accounts'] = 0
         else:
             metrics['total_storage_used'] = 0
             metrics['user_mailboxes'] = 0
             metrics['shared_mailboxes'] = 0
+            metrics['onedrive_user_accounts'] = 0
 
         # ============================================================
         # 2. Device Count (count of devices array)
@@ -234,7 +244,7 @@ class CoveProcessor:
         logger.info("Cove data processed successfully")
         logger.info(f"   Storage Used: {metrics['total_storage_used']} TB")
         logger.info(f"   Device Count: {metrics['device_count']}")
-        logger.info(f"   User Mailboxes: {metrics['user_mailboxes']}, Shared Mailboxes: {metrics['shared_mailboxes']}")
+        logger.info(f"   User Mailboxes: {metrics['user_mailboxes']}, Shared Mailboxes: {metrics['shared_mailboxes']}, OneDrive Accounts: {metrics['onedrive_user_accounts']}")
         logger.info(f"   Workstations: {device_dist['Workstation']}, Servers: {device_dist['Server']}")
 
         return {"cove_metrics": metrics}
@@ -251,6 +261,7 @@ class CoveProcessor:
             "device_count": 0,
             "user_mailboxes": 0,
             "shared_mailboxes": 0,
+            "onedrive_user_accounts": 0,
             "device_distribution": {"Workstation": 0, "Server": 0, "Undefined": 0},
             "asset_distribution": {"Physical": 0, "Virtual": 0, "Undefined": 0},
             "retention_policy_distribution": {}

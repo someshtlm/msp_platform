@@ -79,7 +79,7 @@ def fetch_ninjaone_data(ninja_client=None, use_time_filter: bool = True, month_n
     cache_key = f"{org_id}_{month_name or 'default'}"
 
     # DISABLED CACHING for PDF generation to prevent cross-organization data contamination
-    logger.debug(f"🔄 Fetching fresh NinjaOne data for org {org_id}, month: {month_name or 'default'}")
+    logger.debug(f"Fetching fresh NinjaOne data for org {org_id}, month: {month_name or 'default'}")
 
     if ninja_client:
         # Extract org_id from the ninja_client to ensure processor uses correct organization
@@ -87,13 +87,13 @@ def fetch_ninjaone_data(ninja_client=None, use_time_filter: bool = True, month_n
         processor = NinjaOneProcessor(ninjaone_org_id=org_id)
         processor.client = ninja_client  # Use the same client instance
         _ninjaone_cache = processor.fetch_all_data(use_time_filter=use_time_filter, month_name=month_name)
-        logger.debug(f"✅ Used ninja_client with org_id: {org_id}")
+        logger.debug(f"Used ninja_client with org_id: {org_id}")
     else:
         processor = NinjaOneProcessor()
         _ninjaone_cache = processor.fetch_all_data(use_time_filter=use_time_filter, month_name=month_name)
-        logger.debug("✅ Used default processor configuration")
+        logger.debug("Used default processor configuration")
 
-    logger.debug("✅ NinjaOne data fetched fresh (no caching)")
+    logger.debug("NinjaOne data fetched fresh (no caching)")
     return _ninjaone_cache
 
 async def fetch_autotask_data(autotask_client=None, company_id: Optional[int] = None, month_name: str = None) -> Dict[str, Any]:
@@ -106,18 +106,18 @@ async def fetch_autotask_data(autotask_client=None, company_id: Optional[int] = 
     global _autotask_cache
 
     # DISABLED CACHING for PDF generation to prevent cross-organization data contamination
-    logger.debug(f"🔄 Fetching fresh Autotask data for company {company_id}")
+    logger.debug(f"Fetching fresh Autotask data for company {company_id}")
 
     processor = AutotaskProcessor()
     _autotask_cache = await processor.fetch_all_data(company_id=company_id, month_name=month_name)
-    logger.debug("✅ Autotask data fetched fresh (no caching)")
+    logger.debug(" Autotask data fetched fresh (no caching)")
 
     return _autotask_cache
 
 
 def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Dict[str, Any]] = None, month_name: str = None, connectsecure_company_id: str = None) -> Dict[str, Any]:
 
-    print("🔍 DEBUG: generate_final_output called")
+    print("DEBUG: generate_final_output called")
 
     # Process NinjaOne data
     ninjaone_processor = NinjaOneProcessor()
@@ -132,7 +132,7 @@ def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Di
     # ADDED: Process ConnectSecure data
     if connectsecure_company_id:
         try:
-            print(f"🔍 DEBUG: Adding ConnectSecure data for company {connectsecure_company_id}")
+            print(f"DEBUG: Adding ConnectSecure data for company {connectsecure_company_id}")
             connectsecure_processor = ConnectSecureProcessor(connectsecure_company_id=connectsecure_company_id)
 
             # Fetch ConnectSecure data using the working endpoint with month filtering
@@ -145,17 +145,17 @@ def generate_final_output(ninja_data: Dict[str, Any], autotask_data: Optional[Di
                 # Add to final output
                 final_output.update(connectsecure_processed)
 
-                print(f"🔍 DEBUG: ConnectSecure data added - {len(connectsecure_raw.get('assets', []))} assets")
-                print(f"🔍 DEBUG: Final output now has keys: {list(final_output.keys())}")
+                print(f"DEBUG: ConnectSecure data added - {len(connectsecure_raw.get('assets', []))} assets")
+                print(f"DEBUG: Final output now has keys: {list(final_output.keys())}")
             else:
-                print("🔍 DEBUG: No ConnectSecure assets found")
+                print(" DEBUG: No ConnectSecure assets found")
 
         except Exception as e:
-            print(f"🔍 DEBUG: ConnectSecure processing failed for company {connectsecure_company_id}: {e}")
+            print(f"DEBUG: ConnectSecure processing failed for company {connectsecure_company_id}: {e}")
             # Don't fail the entire report if ConnectSecure fails
             pass
     else:
-        print("🔍 DEBUG: No ConnectSecure company_id provided, skipping ConnectSecure data")
+        print(" DEBUG: No ConnectSecure company_id provided, skipping ConnectSecure data")
 
     return final_output
 
@@ -703,11 +703,11 @@ async def main() -> None:
 
         # NEW: Use account_id and org_id if both are provided
         if args.account_id and args.org_id:
-            logger.info(f"✅ Using NEW credential system: account_id={args.account_id}, org_id={args.org_id}")
+            logger.info(f" Using NEW credential system: account_id={args.account_id}, org_id={args.org_id}")
             final_output = await orchestrator.collect_all_data_with_org_id(args.month)
         # OLD: Fallback to ninjaone_org_id method
         else:
-            logger.warning("⚠️ Using DEPRECATED ninjaone_org_id method. Please migrate to --account-id and --org-id.")
+            logger.warning("Using DEPRECATED ninjaone_org_id method. Please migrate to --account-id and --org-id.")
             final_output = await orchestrator.collect_all_data_for_org(args.ninjaone_org_id, args.month)
 
         end_time = datetime.now()
