@@ -229,7 +229,7 @@ class NinjaOneAPIClient:
             params['installedAfter'] = start_date
             params['installedBefore'] = end_date
 
-            logger.debug(f"   → Using SERVER-SIDE filtering: installedAfter={start_date}, installedBefore={end_date}")
+            logger.debug(f"Using SERVER-SIDE filtering: installedAfter={start_date}, installedBefore={end_date}")
 
         data = self._make_request(self.endpoints["os_patch_installs"], params=params)
         logger.debug(f"   → Retrieved {len(data)} OS patch installs (server-side filtered)")
@@ -248,3 +248,4 @@ class NinjaOneAPIClient:
         data = self._make_request(self.endpoints["locations"])
         logger.debug(f"   → Retrieved {len(data)} locations")
         return data
+    
