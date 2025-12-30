@@ -24,7 +24,7 @@ async def get_client_id(
 
     # If org_id provided (new method), look up credentials and return client_id
     if org_id:
-        from supabase_services import get_organization_credentials
+        from app.core.database.supabase_services import get_organization_credentials
         creds = await get_organization_credentials(org_id)
         if not creds:
             raise HTTPException(

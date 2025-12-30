@@ -7,7 +7,7 @@ from typing import Optional,Dict,Any
 from app.core.database.supabase_services import get_organization_credentials
 from fastapi import APIRouter, Body, Depends, Query, HTTPException
 from app.core.auth.dependencies import get_client_id
-from app.utils.auth import get_access_token
+from app.core.auth.middleware import get_access_token
 from app.schemas.api import GraphApiResponse
 from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 
@@ -35,7 +35,7 @@ async def get_all_compliance_status(clientId: Optional[str] = Query(None),org_id
             creds = await get_organization_credentials(org_id) if org_id else None
             if creds:
                 # Pre-cache token to avoid lookup issues
-                from app.utils.auth import get_access_token_from_credentials
+                from app.core.auth.middleware import get_access_token_from_credentials
                 await get_access_token_from_credentials(
                     creds['tenant_id'],
                     creds['client_id'],
@@ -50,7 +50,7 @@ async def get_all_compliance_status(clientId: Optional[str] = Query(None),org_id
                 )
             client_id = creds['client_id']
             # Pre-cache token before calling internal functions
-            from app.utils.auth import get_access_token_from_credentials
+            from app.core.auth.middleware import get_access_token_from_credentials
             await get_access_token_from_credentials(
                 creds['tenant_id'],
                 creds['client_id'],

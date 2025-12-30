@@ -31,7 +31,7 @@ class SupabaseCredentialManager:
             Dict with decrypted autotask, ninjaone, connectsecure credentials
         """
         try:
-            from src.services.encryption_manager import EncryptionManager
+            from app.services.encryption.manager import EncryptionManager
 
             # Fetch encrypted credentials from integration_credentials table
             response = self.supabase.table('integration_credentials')\

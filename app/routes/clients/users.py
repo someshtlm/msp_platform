@@ -1,7 +1,7 @@
 import logging
 import httpx
 from fastapi import APIRouter, HTTPException, Path, Depends
-from app.utils.auth import get_access_token
+from app.core.auth.middleware import get_access_token
 from app.schemas.api import GraphApiResponse
 from app.core.auth.dependencies import get_client_credentials
 from datetime import datetime, timedelta

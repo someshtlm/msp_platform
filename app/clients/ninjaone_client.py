@@ -20,7 +20,7 @@ if security_system_root not in sys.path:
 
 # Updated imports for new app/ structure
 from app.core.config.settings import DEFAULT_TIMEOUT, DEFAULT_PAGE_SIZE, MAX_PAGES
-from app.utils.auth import OAuth2ClientCredentialsClient
+from app.core.auth.middleware import OAuth2ClientCredentialsClient
 
 logger = logging.getLogger(__name__)
 

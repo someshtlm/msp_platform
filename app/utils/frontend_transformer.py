@@ -69,10 +69,7 @@ class FrontendTransformer:
             selected_charts = None
             if account_id:
                 try:
-                    try:
-                        from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-                    except ImportError:
-                        from config.supabase_client import SupabaseCredentialManager
+                    from app.core.config.supabase import SupabaseCredentialManager
                     supabase_manager = SupabaseCredentialManager()
                     charts_response = supabase_manager.supabase.rpc('get_account_charts', {
                         'p_account_id': account_id

@@ -1,7 +1,7 @@
 import logging
 import httpx
 from fastapi import APIRouter
-from app.utils.auth import get_access_token
+from app.core.auth.middleware import get_access_token
 from app.schemas.api import GraphApiResponse
 from app.schemas.api import (
     BulkUserOperationRequest,

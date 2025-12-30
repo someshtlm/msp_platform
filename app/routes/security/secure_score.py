@@ -3,7 +3,7 @@ import httpx
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Query, HTTPException
-from app.utils.auth import get_access_token
+from app.core.auth.middleware import get_access_token
 from app.schemas.api import GraphApiResponse
 from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 from app.core.auth.dependencies import get_client_id

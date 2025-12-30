@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any
 from fastapi import APIRouter, Body
-from app.utils.auth import get_access_token
+from app.core.auth.middleware import get_access_token
 from app.core.auth.dependencies import get_client_credentials
 from app.schemas.api import GraphApiResponse
 from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL

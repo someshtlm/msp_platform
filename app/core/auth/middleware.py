@@ -3,7 +3,7 @@ import logging
 from fastapi import HTTPException
 from msal import ConfidentialClientApplication
 from typing import Dict
-from supabase_services import get_tenant_credentials, get_credentials_by_identifier
+from app.core.database.supabase_services import get_tenant_credentials, get_credentials_by_identifier
 
 # Configure logging
 logger = logging.getLogger(__name__)

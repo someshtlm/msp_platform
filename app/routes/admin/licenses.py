@@ -3,7 +3,7 @@ import httpx
 import asyncio
 from fastapi import APIRouter,Depends
 from app.core.auth.dependencies import get_client_id, get_client_credentials
-from app.utils.auth import get_access_token, get_access_token_by_identifier
+from app.core.auth.middleware import get_access_token, get_access_token_by_identifier
 from app.schemas.api import GraphApiResponse
 from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 

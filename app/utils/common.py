@@ -2,9 +2,9 @@ import logging
 from typing import Optional, Literal
 import httpx
 from fastapi import HTTPException
-from auth import get_access_token
-from models import GraphApiResponse
-from config import GRAPH_V1_URL, GRAPH_BETA_URL
+from app.core.auth.middleware import get_access_token
+from app.schemas.api import GraphApiResponse
+from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 
 logger = logging.getLogger(__name__)
 

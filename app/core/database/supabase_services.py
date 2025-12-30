@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Optional, Dict
 from supabase import create_client, Client
-from crypto_utils import decrypt_client_secret
+from app.services.encryption.manager import decrypt_client_secret
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ async def get_credentials_by_client_id(client_id: str) -> Optional[Dict[str, str
         Dictionary with decrypted tenant_id, client_id, and client_secret, or None if not found
     """
     try:
-        from crypto_utils import encrypt_client_secret
+        from app.services.encryption.manager import encrypt_client_secret
 
         # Encrypt the provided client_id to match against database
         encrypted_client_id = encrypt_client_secret(client_id)
