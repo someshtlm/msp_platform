@@ -73,8 +73,6 @@ async def main() -> None:
                         help='[DEPRECATED] Autotask company ID for filtering (use --org-id instead)')
     parser.add_argument('--filename', type=str,
                         help='Custom filename for PDF output')
-    parser.add_argument('--credential-id', type=str, default='4ffdf31a-9ea7-4962-a8ff-4ef440c793f3',
-                        help='[DEPRECATED] Credential ID for Supabase lookup. Use --account-id instead.')
     parser.add_argument('--month', type=str,
                         help='Specific month for report generation in month_year format (e.g., "november_2024", "december_2024"). Defaults to previous month')
     parser.add_argument('--list-months', action='store_true',

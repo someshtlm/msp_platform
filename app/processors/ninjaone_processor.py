@@ -103,8 +103,12 @@ class NinjaOneProcessor:
 
         # Only initialize client if credentials are complete
         if self.config:
-            # Use dynamic org_id if provided, otherwise fall back to config or default
-            self.org_id = ninjaone_org_id or self.config.get('target_org_id', '41')
+            # Use dynamic org_id if provided, otherwise fall back to config (no hardcoded default)
+            self.org_id = ninjaone_org_id or self.config.get('target_org_id')
+
+            # Log warning if no org_id is provided
+            if not self.org_id:
+                logger.warning("No ninjaone_org_id provided - organization identifier will be 'Unknown'")
 
             self.client = NinjaOneAPIClient(
                 client_id=self.config['ninjaone_client_id'],
@@ -299,8 +303,8 @@ class NinjaOneProcessor:
         device_spread = self._analyze_device_spread(devices)
         formatted_devices = self._format_device_details(devices_detailed, location_mapping)
 
-        # FIXED: Use self.config instead of TARGET_ORG_ID
-        org_id = self.config.get('target_org_id', '41')
+        # Use self.org_id (already set in __init__) instead of re-reading from config
+        org_id = self.org_id or "Unknown"
         org_name = raw_data.get('organization_info', {}).get('name', f'Organization {org_id}')
 
         return {

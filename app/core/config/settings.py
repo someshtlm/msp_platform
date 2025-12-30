@@ -78,7 +78,7 @@ class ConfigManager:
         """
         if self._credentials is None:
             # Use default credential ID if none provided
-            credential_id = credential_id or os.getenv('DEFAULT_CREDENTIAL_ID', '4ffdf31a-9ea7-4962-a8ff-4ef440c793f3')
+            credential_id = credential_id
 
             # Load from Supabase
             encrypted_creds = self.supabase_manager.get_credentials_by_id(credential_id)
