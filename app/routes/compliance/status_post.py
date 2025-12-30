@@ -14,12 +14,12 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any
 from fastapi import APIRouter, Body
-from auth import get_access_token
-from dependencies import get_client_credentials
-from models import GraphApiResponse
-from config import GRAPH_V1_URL, GRAPH_BETA_URL
+from app.utils.auth import get_access_token
+from app.core.auth.dependencies import get_client_credentials
+from app.schemas.api import GraphApiResponse
+from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 
-from schemas import (
+from app.schemas.api import (
     PolicyIdEnum,
     OptionalFixParameters,
     MFAFixRequest,
@@ -29,7 +29,7 @@ from schemas import (
     validate_and_sanitize_policy_id
 )
 # Import the specific POST functions from the main compliance endpoints file
-from endpoints.all_complaince_status import (
+from app.routes.compliance.status import (
      # get_admin_mfa_status,
     get_user_mfa_status,
 list_sharepoint_external_resharing_status,
@@ -337,7 +337,7 @@ async def fix_compliance_policy(
 #         # Extract client_id from credentials
 #         identifier, identifier_type = credentials
 #         if identifier_type == "ninjaone_org_id":
-#             from supabase_services import supabase
+#             from app.core.database.supabase_services import supabase
 #             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
 #             if not response.data or len(response.data) == 0:
 #                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -402,7 +402,7 @@ async def fix_compliance_policy(
 #
 #         # Convert ninjaone_org_id to client_id for backward compatibility
 #         if identifier_type == "ninjaone_org_id":
-#             from supabase_services import supabase
+#             from app.core.database.supabase_services import supabase
 #             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
 #             if not response.data or len(response.data) == 0:
 #                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -546,7 +546,7 @@ async def fix_compliance_policy(
 #         # Extract client_id from credentials
 #         identifier, identifier_type = credentials
 #         if identifier_type == "ninjaone_org_id":
-#             from supabase_services import supabase
+#             from app.core.database.supabase_services import supabase
 #             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
 #             if not response.data or len(response.data) == 0:
 #                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -618,7 +618,7 @@ async def fix_compliance_policy(
 #
 #         # Convert ninjaone_org_id to client_id for backward compatibility
 #         if identifier_type == "ninjaone_org_id":
-#             from supabase_services import supabase
+#             from app.core.database.supabase_services import supabase
 #             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
 #             if not response.data or len(response.data) == 0:
 #                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -759,7 +759,7 @@ async def fix_sharepoint_external_resharing(credentials: tuple = Depends(get_cli
         # Extract client_id from credentials
         identifier, identifier_type = credentials
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -838,7 +838,7 @@ async def fix_sharepoint_external_resharing(credentials: tuple = Depends(get_cli
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -1044,7 +1044,7 @@ async def fix_unified_auditing_status(credentials: tuple = Depends(get_client_cr
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -1229,7 +1229,7 @@ async def fix_high_risk_users_policies(credentials: tuple = Depends(get_client_c
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -1409,7 +1409,7 @@ async def fix_risky_signin_policies(credentials: tuple = Depends(get_client_cred
         # Extract client_id from credentials
         identifier, identifier_type = credentials
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -1589,7 +1589,7 @@ async def fix_shared_mailbox_signin_status(credentials: tuple = Depends(get_clie
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -1725,7 +1725,7 @@ async def fix_guest_user_access_permissions(credentials: tuple = Depends(get_cli
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -2071,7 +2071,7 @@ async def fix_sharepoint_site_creation_status(credentials: tuple = Depends(get_c
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -2284,7 +2284,7 @@ async def fix_weak_authenticator_status(credentials: tuple = Depends(get_client_
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -2565,7 +2565,7 @@ async def fix_password_expiration_policy(credentials: tuple = Depends(get_client
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -2711,7 +2711,7 @@ async def fix_teams_external_access(credentials: tuple = Depends(get_client_cred
 
         # Convert ninjaone_org_id to client_id for backward compatibility
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")

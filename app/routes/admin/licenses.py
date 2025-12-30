@@ -2,10 +2,10 @@ import logging
 import httpx
 import asyncio
 from fastapi import APIRouter,Depends
-from dependencies import get_client_id, get_client_credentials
-from auth import get_access_token, get_access_token_by_identifier
-from models import GraphApiResponse
-from config import GRAPH_V1_URL, GRAPH_BETA_URL
+from app.core.auth.dependencies import get_client_id, get_client_credentials
+from app.utils.auth import get_access_token, get_access_token_by_identifier
+from app.schemas.api import GraphApiResponse
+from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
 
 # Create router for license endpoints
 router = APIRouter()
@@ -24,7 +24,7 @@ def lookup_friendly_name_from_db(service_plan_name: str) -> str:
         Product display name from database, or None if not found
     """
     try:
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
 
         response = supabase.table('license_sku_mappings')\
             .select('product_display_name')\
@@ -294,13 +294,13 @@ async def get_license_summary(credentials: tuple = Depends(get_client_credential
         # Get the client_id for backward compatibility with existing Microsoft Graph calls
         if identifier_type == "org_id":
             # NEW: Handle org_id by fetching credentials from m365_credentials
-            from supabase_services import get_organization_credentials
+            from app.core.database.supabase_services import get_organization_credentials
             creds = await get_organization_credentials(int(identifier))
             if not creds:
                 raise Exception(f"No credentials found for org_id: {identifier}")
             client_id = creds['client_id']
         elif identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")

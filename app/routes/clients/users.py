@@ -1,9 +1,9 @@
 import logging
 import httpx
 from fastapi import APIRouter, HTTPException, Path, Depends
-from auth import get_access_token
-from models import GraphApiResponse
-from dependencies import get_client_credentials
+from app.utils.auth import get_access_token
+from app.schemas.api import GraphApiResponse
+from app.core.auth.dependencies import get_client_credentials
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import asyncio
@@ -27,13 +27,13 @@ async def list_users(credentials: tuple = Depends(get_client_credentials)):
 
         # Convert identifier to client_id
         if identifier_type == "org_id":
-            from supabase_services import get_organization_credentials
+            from app.core.database.supabase_services import get_organization_credentials
             creds = await get_organization_credentials(int(identifier))
             if not creds:
                 raise Exception(f"No credentials found for org_id: {identifier}")
             client_id = creds['client_id']
         elif identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -123,13 +123,13 @@ async def get_all_users_details(credentials: tuple = Depends(get_client_credenti
 
         # Convert identifier to client_id
         if identifier_type == "org_id":
-            from supabase_services import get_organization_credentials
+            from app.core.database.supabase_services import get_organization_credentials
             creds = await get_organization_credentials(int(identifier))
             if not creds:
                 raise Exception(f"No credentials found for org_id: {identifier}")
             client_id = creds['client_id']
         elif identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")
@@ -264,13 +264,13 @@ async def get_user_details(
 
         # Convert identifier to client_id
         if identifier_type == "org_id":
-            from supabase_services import get_organization_credentials
+            from app.core.database.supabase_services import get_organization_credentials
             creds = await get_organization_credentials(int(identifier))
             if not creds:
                 raise Exception(f"No credentials found for org_id: {identifier}")
             client_id = creds['client_id']
         elif identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")

@@ -4,9 +4,9 @@ from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel
 from typing import Optional, List
 from supabase import create_client, Client
-from models import GraphApiResponse
+from app.schemas.api import GraphApiResponse
 from datetime import datetime
-from crypto_utils import encrypt_client_secret
+from app.services.encryption.manager import encrypt_client_secret
 
 
 # Create router for client endpoints

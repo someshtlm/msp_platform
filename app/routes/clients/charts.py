@@ -8,9 +8,9 @@ import logging
 from fastapi import APIRouter
 from typing import List, Dict, Any
 from datetime import datetime
-from models import GraphApiResponse
-from supabase_services import supabase
-from schemas import SavePlatformCredentialsRequest
+from app.schemas.api import GraphApiResponse
+from app.core.database.supabase_services import supabase
+from app.schemas.api import SavePlatformCredentialsRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ async def get_platform_list(u_id: str):
                 encrypted_blob = creds_response.data[0]['credentials']
 
                 # Decrypt credentials
-                from security_reporting_system.src.services.encryption_manager import EncryptionManager
+                from app.services.encryption.manager import EncryptionManager
                 encryption_manager = EncryptionManager()
                 decrypted_credentials = encryption_manager.decrypt_integration_credentials(encrypted_blob)
                 logger.info(f"Successfully decrypted credentials for account {account_id}")
@@ -411,7 +411,7 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
                 .limit(1)\
                 .execute()
 
-            from security_reporting_system.src.services.encryption_manager import EncryptionManager
+            from app.services.encryption.manager import EncryptionManager
             encryption_manager = EncryptionManager()
 
             if existing_creds_response.data and len(existing_creds_response.data) > 0:
