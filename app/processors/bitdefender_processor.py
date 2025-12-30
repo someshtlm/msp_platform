@@ -6,7 +6,7 @@ Processes Bitdefender GravityZone API data into chart and table format
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from src.clients.bitdefender_client import BitdefenderClient
+from app.clients.bitdefender_client import BitdefenderClient
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +38,8 @@ class BitdefenderProcessor:
             Decrypted API key
         """
         try:
-            try:
-                from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-                from security_reporting_system.src.services.encryption_manager import EncryptionManager
-            except ImportError:
-                from config.supabase_client import SupabaseCredentialManager
-                from src.services.encryption_manager import EncryptionManager
+            from app.core.config.supabase import SupabaseCredentialManager
+            from app.services.encryption.manager import EncryptionManager
 
             supabase_manager = SupabaseCredentialManager()
             encryption_manager = EncryptionManager()

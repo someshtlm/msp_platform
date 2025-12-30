@@ -32,10 +32,7 @@ class CoveProcessor:
             return
 
         try:
-            try:
-                from src.clients.cove_client import CoveAPIClient
-            except ImportError:
-                from security_reporting_system.src.clients.cove_client import CoveAPIClient
+            from app.clients.cove_client import CoveAPIClient
 
             self.client = CoveAPIClient(account_id=account_id)
             logger.info(f"Cove processor initialized for account_id: {account_id}")

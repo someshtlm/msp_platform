@@ -17,14 +17,9 @@ security_system_root = os.path.join(current_dir, '..', '..')
 if security_system_root not in sys.path:
     sys.path.insert(0, security_system_root)
 
-# Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-try:
-    from security_reporting_system.config.config import config_manager
-    from security_reporting_system.src.clients.api_client import NinjaOneAPIClient
-except ImportError:
-    # Fallback for standalone execution
-    from config.config import config_manager
-    from src.clients.api_client import NinjaOneAPIClient
+# Updated imports for new app/ structure
+from app.core.config.settings import config_manager
+from app.clients.ninjaone_client import NinjaOneAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +38,7 @@ class NinjaOneProcessor:
         """
         # NEW: Load credentials from account_id (integration_credentials table)
         if account_id is not None:
-            try:
-                from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-            except ImportError:
-                from config.supabase_client import SupabaseCredentialManager
+            from app.core.config.supabase import SupabaseCredentialManager
 
             credential_manager = SupabaseCredentialManager()
             credentials = credential_manager.get_credentials_by_account_id(account_id)
@@ -144,10 +136,7 @@ class NinjaOneProcessor:
 
         if use_time_filter:
             # Import month selector for timestamp calculation
-            try:
-                from security_reporting_system.src.utils.month_selector import MonthSelector
-            except ImportError:
-                from src.utils.month_selector import MonthSelector
+            from app.utils.month_selector import MonthSelector
 
             try:
                 month_selector = MonthSelector()
