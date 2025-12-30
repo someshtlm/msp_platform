@@ -26,12 +26,8 @@ class CoveAPIClient:
         # Load credentials from database
         if account_id is not None:
             try:
-                try:
-                    from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-                    from security_reporting_system.src.services.encryption_manager import EncryptionManager
-                except ImportError:
-                    from config.supabase_client import SupabaseCredentialManager
-                    from src.services.encryption_manager import EncryptionManager
+                from app.core.config.supabase import SupabaseCredentialManager
+                from app.services.encryption.manager import EncryptionManager
 
                 credential_manager = SupabaseCredentialManager()
                 credentials = credential_manager.get_credentials_by_account_id(account_id)

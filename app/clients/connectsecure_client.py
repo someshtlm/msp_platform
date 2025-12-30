@@ -54,10 +54,7 @@ class ConnectSecureClient:
 
             # NEW: Load credentials from account_id
             if account_id is not None:
-                try:
-                    from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-                except ImportError:
-                    from config.supabase_client import SupabaseCredentialManager
+                from app.core.config.supabase import SupabaseCredentialManager
 
                 credential_manager = SupabaseCredentialManager()
                 credentials = credential_manager.get_credentials_by_account_id(account_id)
@@ -76,11 +73,7 @@ class ConnectSecureClient:
 
             # OLD: Fallback to legacy credential_id method
             else:
-                # Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-                try:
-                    from security_reporting_system.config.config import config_manager
-                except ImportError:
-                    from config.config import config_manager
+                from app.core.config.settings import config_manager
 
                 if credential_id:
                     logger.warning("ConnectSecure: Using DEPRECATED credential_id method. Please migrate to account_id.")
@@ -308,7 +301,7 @@ class ConnectSecureClient:
         if month_name:
             # Calculate date range using MonthSelector (same as AutoTask/NinjaOne)
             try:
-                from src.utils.month_selector import MonthSelector
+                from app.utils.month_selector import MonthSelector
                 month_selector = MonthSelector()
                 start_timestamp, end_timestamp = month_selector.get_month_timestamps(month_name)
 
@@ -409,7 +402,7 @@ class ConnectSecureClient:
         if month_name:
             # Calculate date range using MonthSelector
             try:
-                from src.utils.month_selector import MonthSelector
+                from app.utils.month_selector import MonthSelector
                 month_selector = MonthSelector()
                 start_timestamp, end_timestamp = month_selector.get_month_timestamps(month_name)
 
@@ -523,7 +516,7 @@ class ConnectSecureClient:
         if month_name:
             # Calculate date range using MonthSelector
             try:
-                from src.utils.month_selector import MonthSelector
+                from app.utils.month_selector import MonthSelector
                 month_selector = MonthSelector()
                 start_timestamp, end_timestamp = month_selector.get_month_timestamps(month_name)
 
@@ -604,11 +597,7 @@ class ConnectSecureClient:
 
 def create_connectsecure_client(user_id: str = None):
     """Create ConnectSecure client with dynamic configuration."""
-    # Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-    try:
-        from security_reporting_system.config.config import config_manager
-    except ImportError:
-        from config.config import config_manager
+    from app.core.config.settings import config_manager
     config = config_manager.load_credentials(credential_id)
 
     cs_config = ConnectSecureConfig(

@@ -18,14 +18,9 @@ security_system_root = os.path.join(current_dir, '..', '..')
 if security_system_root not in sys.path:
     sys.path.insert(0, security_system_root)
 
-# Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-try:
-    from security_reporting_system.config.config import DEFAULT_TIMEOUT, DEFAULT_PAGE_SIZE, MAX_PAGES
-    from security_reporting_system.src.utils.auth import OAuth2ClientCredentialsClient
-except ImportError:
-    # Fallback for standalone execution
-    from config.config import DEFAULT_TIMEOUT, DEFAULT_PAGE_SIZE, MAX_PAGES
-    from src.utils.auth import OAuth2ClientCredentialsClient
+# Updated imports for new app/ structure
+from app.core.config.settings import DEFAULT_TIMEOUT, DEFAULT_PAGE_SIZE, MAX_PAGES
+from app.utils.auth import OAuth2ClientCredentialsClient
 
 logger = logging.getLogger(__name__)
 
