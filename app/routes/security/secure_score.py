@@ -3,11 +3,11 @@ import httpx
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Query, HTTPException
-from auth import get_access_token
-from models import GraphApiResponse
-from config import GRAPH_V1_URL, GRAPH_BETA_URL
-from dependencies import get_client_id
-from supabase_services import get_organization_credentials
+from app.utils.auth import get_access_token
+from app.schemas.api import GraphApiResponse
+from app.core.config.settings import GRAPH_V1_URL, GRAPH_BETA_URL
+from app.core.auth.dependencies import get_client_id
+from app.core.database.supabase_services import get_organization_credentials
 
 # Create router for license endpoints
 router = APIRouter()

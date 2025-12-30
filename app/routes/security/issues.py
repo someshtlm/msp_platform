@@ -1,9 +1,9 @@
 import logging
 import httpx
 from fastapi import APIRouter
-from auth import get_access_token
-from models import GraphApiResponse
-from schemas import (
+from app.utils.auth import get_access_token
+from app.schemas.api import GraphApiResponse
+from app.schemas.api import (
     BulkUserOperationRequest,
     RiskyUserRemediationRequest,
     RiskDetectionReviewRequest,

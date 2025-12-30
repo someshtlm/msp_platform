@@ -4,7 +4,7 @@ Month selector endpoints for multi-month reporting functionality
 
 import logging
 from fastapi import APIRouter
-from models import GraphApiResponse
+from app.schemas.api import GraphApiResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -17,16 +17,7 @@ async def list_available_months():
     Returns the last 3 months (excluding current month) for report generation.
     """
     try:
-        # Import the month selector from security_reporting_system
-        import sys
-        import os
-
-        # Add security_reporting_system to path
-        security_system_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'security_reporting_system')
-        if security_system_path not in sys.path:
-            sys.path.insert(0, security_system_path)
-
-        from src.utils.month_selector import MonthSelector
+        from app.utils.month_selector import MonthSelector
 
         month_selector = MonthSelector()
         available_months = month_selector.list_available_months()

@@ -4,15 +4,11 @@ These endpoints test reading data from cache tables and transforming to frontend
 """
 
 import logging
-import sys
-import os
 from datetime import datetime
 from fastapi import APIRouter, Query, Path
-from models import GraphApiResponse
+from app.schemas.api import GraphApiResponse
 
-# Add parent directory to path to import cache_services
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from cache_services import (
+from app.services.cache.cache_services import (
     get_cached_compliance,
     get_cached_mfa,
     get_cached_licenses,
@@ -40,7 +36,7 @@ async def test_cache_read_compliance(clientId: int = Query(..., description="Cli
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading compliance cache for org_id: {org_id}")
+        logger.info(f"TEST: Reading compliance cache for org_id: {org_id}")
 
         cached_data = await get_cached_compliance(org_id)
 
@@ -58,7 +54,7 @@ async def test_cache_read_compliance(clientId: int = Query(..., description="Cli
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -79,7 +75,7 @@ async def test_cache_read_mfa(clientId: int = Query(..., description="Client ID 
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading MFA cache for org_id: {org_id}")
+        logger.info(f" TEST: Reading MFA cache for org_id: {org_id}")
 
         cached_data = await get_cached_mfa(org_id)
 
@@ -97,7 +93,7 @@ async def test_cache_read_mfa(clientId: int = Query(..., description="Client ID 
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f" TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -118,7 +114,7 @@ async def test_cache_read_licenses(clientId: int = Query(..., description="Clien
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading license cache for org_id: {org_id}")
+        logger.info(f"TEST: Reading license cache for org_id: {org_id}")
 
         cached_data = await get_cached_licenses(org_id)
 
@@ -136,7 +132,7 @@ async def test_cache_read_licenses(clientId: int = Query(..., description="Clien
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -157,7 +153,7 @@ async def test_cache_read_secure_score(clientId: int = Query(..., description="C
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading secure score cache for org_id: {org_id}")
+        logger.info(f"TEST: Reading secure score cache for org_id: {org_id}")
 
         cached_data = await get_cached_secure_score(org_id)
 
@@ -175,7 +171,7 @@ async def test_cache_read_secure_score(clientId: int = Query(..., description="C
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -196,7 +192,7 @@ async def test_cache_read_users_list(clientId: int = Query(..., description="Cli
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading users list cache for org_id: {org_id}")
+        logger.info(f"TEST: Reading users list cache for org_id: {org_id}")
 
         cached_data = await get_cached_users_list(org_id)
 
@@ -214,7 +210,7 @@ async def test_cache_read_users_list(clientId: int = Query(..., description="Cli
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -240,7 +236,7 @@ async def test_cache_read_user_details(
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading user details cache for user_id: {user_id}, org_id: {org_id}")
+        logger.info(f"TEST: Reading user details cache for user_id: {user_id}, org_id: {org_id}")
 
         cached_data = await get_cached_user_details(user_id, org_id)
 
@@ -258,7 +254,7 @@ async def test_cache_read_user_details(
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -284,7 +280,7 @@ async def test_cache_read_clients(u_id: str = Query(..., description="User UUID 
         GraphApiResponse with clients/organizations for user's account or error if not found/expired
     """
     try:
-        logger.info(f"🧪 TEST: Reading clients from organizations table for u_id: {u_id}")
+        logger.info(f"TEST: Reading clients from organizations table for u_id: {u_id}")
 
         cached_data = await get_cached_clients(u_id)
 
@@ -302,7 +298,7 @@ async def test_cache_read_clients(u_id: str = Query(..., description="User UUID 
         )
 
     except Exception as e:
-        logger.error(f"❌ TEST ERROR: {e}")
+        logger.error(f"TEST ERROR: {e}")
         return GraphApiResponse(
             status_code=500,
             data=None,
@@ -323,7 +319,7 @@ async def test_cache_read_all(clientId: int = Query(..., description="Client ID 
     """
     try:
         org_id = clientId  # Extract clientId and use as org_id
-        logger.info(f"🧪 TEST: Reading ALL caches for org_id: {org_id}")
+        logger.info(f"TEST: Reading ALL caches for org_id: {org_id}")
 
         # Fetch all cache types concurrently
         compliance_data = await get_cached_compliance(org_id)
@@ -411,7 +407,7 @@ async def get_cached_user_ids(org_id: int = Path(..., description="Organization 
         GraphApiResponse with list of user_ids or empty list if no users found
     """
     try:
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
 
         logger.info(f"Fetching cached user IDs for org_id: {org_id}")
 
@@ -450,7 +446,7 @@ async def get_cached_user_ids(org_id: int = Path(..., description="Organization 
 # PHASE 2: WRITE TEST ENDPOINTS
 # ============================================================================
 
-from cache_write_services import (
+from app.services.cache.cache_write_services import (
     write_compliance_to_cache,
     write_mfa_to_cache,
     write_licenses_to_cache,

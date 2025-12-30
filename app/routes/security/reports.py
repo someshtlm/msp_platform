@@ -1,7 +1,6 @@
 # report_endpoint.py
 
 import logging
-import sys
 import os
 import io
 import base64
@@ -9,104 +8,15 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional, Dict, Any
-from models import GraphApiResponse
-from schemas import AccountAllocationRequest, SaveIntegrationCredentialsRequest
+from app.schemas.api import GraphApiResponse
+from app.schemas.api import AccountAllocationRequest, SaveIntegrationCredentialsRequest
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Add msp_platform root to Python path so we can import security_reporting_system as a package
-msp_platform_root = os.path.join(os.path.dirname(__file__), '..', '..')
-if msp_platform_root not in sys.path:
-    sys.path.insert(0, msp_platform_root)
-
-# === ADD DEBUG CODE RIGHT HERE ===
-print("=== DEBUG: Python Path ===")
-for path in sys.path:
-    print(f"  {path}")
-print("=== DEBUG: Current Directory ===")
-print(f"  {os.getcwd()}")
-print("=== DEBUG: File Location ===")
-print(f"  {__file__}")
-
-# Check if security_reporting_system exists
-security_system_path = os.path.join(msp_platform_root, 'security_reporting_system')
-print(f"=== DEBUG: Security System Path ===")
-print(f"  {security_system_path}")
-print(f"  Exists: {os.path.exists(security_system_path)}")
-
-if os.path.exists(security_system_path):
-    print("=== DEBUG: Security System Contents ===")
-    for item in os.listdir(security_system_path):
-        item_path = os.path.join(security_system_path, item)
-        print(f"  {item} - is_dir: {os.path.isdir(item_path)}")
-
-    # Check config location specifically
-    config_path = os.path.join(security_system_path, 'config')
-    print(f"=== DEBUG: Config Path ===")
-    print(f"  {config_path}")
-    print(f"  Exists: {os.path.exists(config_path)}")
-    if os.path.exists(config_path):
-        print("  Config contents:")
-        for item in os.listdir(config_path):
-            print(f"    {item}")
-
-# Try to import and see what fails
-print("=== DEBUG: Attempting Import ===")
-try:
-    from security_reporting_system.src.main import SecurityAssessmentOrchestrator
-
-    print(" SecurityAssessmentOrchestrator imported successfully")
-except ImportError as e:
-    print(f"Failed to import SecurityAssessmentOrchestrator: {e}")
-    import traceback
-
-    traceback.print_exc()
-
-    # Try to import step by step to find exactly where it fails
-    print("=== DEBUG: Step-by-step Import Test ===")
-    try:
-        import security_reporting_system
-
-        print("security_reporting_system package imported")
-    except ImportError as e:
-        print(f"security_reporting_system package: {e}")
-
-    try:
-        from security_reporting_system import src
-
-        print("security_reporting_system.src imported")
-    except ImportError as e:
-        print(f"security_reporting_system.src: {e}")
-
-    try:
-        from security_reporting_system.src import main
-
-        print(" security_reporting_system.src.main imported")
-    except ImportError as e:
-        print(f" security_reporting_system.src.main: {e}")
-# === END DEBUG CODE ===
-
-# Add msp_platform root to Python path so we can import security_reporting_system as a package
-msp_platform_root = os.path.join(os.path.dirname(__file__), '..', '..')
-if msp_platform_root not in sys.path:
-    sys.path.insert(0, msp_platform_root)
-
-# Import from the restructured security reporting system
-from security_reporting_system.src.main import SecurityAssessmentOrchestrator
-# === ADD MORE DEBUGGING ===
-import security_reporting_system.src.main as main_module
-print("=== DEBUG: SecurityAssessmentOrchestrator methods ===")
-print([method for method in dir(SecurityAssessmentOrchestrator) if not method.startswith('_')])
-
-# Check what's in the main module
-print("=== DEBUG: Main module imports ===")
-import inspect
-for name, obj in inspect.getmembers(main_module):
-    if inspect.ismodule(obj):
-        print(f"  {name}: {obj}")
-# === END DEBUGGING ===
-
+# Import from the restructured app security reporting system
+from app.services.integrations.orchestrator import SecurityAssessmentOrchestrator
+from app.utils.frontend_transformer import FrontendTransformer
 
 # Create router for report endpoints
 router = APIRouter()
@@ -124,8 +34,7 @@ async def get_available_report_months():
         GraphApiResponse: Contains list of available months with keys and date ranges
     """
     try:
-        # Import month selector from security_reporting_system
-        from security_reporting_system.src.utils.month_selector import MonthSelector
+        from app.utils.month_selector import MonthSelector
 
         month_selector = MonthSelector()
         available_months = month_selector.list_available_months()
@@ -169,10 +78,6 @@ async def get_available_report_months():
             error=f"Failed to retrieve available months: {str(e)}"
         )
 
-# Add this import at the top with the other imports
-from security_reporting_system.src.utils.frontend_transformer import FrontendTransformer
-
-
 # Add this new endpoint after the existing GenerateSecurityReport endpoint
 
 def get_organization_name(org_id: int) -> str:
@@ -186,11 +91,7 @@ def get_organization_name(org_id: int) -> str:
         Organization name string, or "Unknown Organization" if not found
     """
     try:
-        from supabase import create_client
-
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-        supabase = create_client(supabase_url, supabase_key)
+        from app.core.database.supabase_services import supabase
 
         response = supabase.table('organizations')\
             .select('organization_name')\
@@ -292,11 +193,7 @@ async def generate_security_report_json_endpoint(
 
         # Step 1: Get account_id from user_id using Supabase RPC function
         try:
-            from supabase import create_client
-
-            supabase_url = os.getenv("SUPABASE_URL")
-            supabase_key = os.getenv("SUPABASE_KEY")
-            supabase = create_client(supabase_url, supabase_key)
+            from app.core.database.supabase_services import supabase
 
             # Call the Supabase RPC function to get account_id
             result = supabase.rpc('get_account_id_from_uid', {'user_uid': user_id}).execute()
@@ -370,8 +267,7 @@ async def generate_security_report_json_endpoint(
         # Validate month format if provided (should be "november_2024" format)
         if month:
             try:
-                # Import month selector to validate format
-                from security_reporting_system.src.utils.month_selector import MonthSelector
+                from app.utils.month_selector import MonthSelector
 
                 month_selector = MonthSelector()
                 # This will validate the format and raise ValueError if invalid
@@ -709,20 +605,7 @@ async def account_allocation_endpoint(request: AccountAllocationRequest):
         logger.info(f"Account allocation request received for company: {request.companyName}, user: {request.userId}")
 
         # Initialize Supabase client
-        from supabase import create_client
-
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-
-        if not supabase_url or not supabase_key:
-            logger.error("Supabase credentials not configured")
-            return GraphApiResponse(
-                status_code=500,
-                data=None,
-                error="Server configuration error: Supabase credentials missing"
-            )
-
-        supabase = create_client(supabase_url, supabase_key)
+        from app.core.database.supabase_services import supabase
 
         # Check if user already exists in platform_users table
         try:
@@ -907,20 +790,7 @@ async def save_integration_credentials_endpoint(request: SaveIntegrationCredenti
                    f"platforms: {[p.platform for p in request.platforms]}")
 
         # Initialize Supabase client
-        from supabase import create_client
-
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-
-        if not supabase_url or not supabase_key:
-            logger.error("Supabase credentials not configured")
-            return GraphApiResponse(
-                status_code=500,
-                data=None,
-                error="Server configuration error: Supabase credentials missing"
-            )
-
-        supabase = create_client(supabase_url, supabase_key)
+        from app.core.database.supabase_services import supabase
 
         # Step 1: Validate account exists (simple validation)
         try:
@@ -969,7 +839,7 @@ async def save_integration_credentials_endpoint(request: SaveIntegrationCredenti
 
         # Step 3: Encrypt credentials using EncryptionManager
         try:
-            from security_reporting_system.src.services.encryption_manager import EncryptionManager
+            from app.services.encryption.manager import EncryptionManager
 
             encryption_manager = EncryptionManager()
             encrypted_blob = encryption_manager.encrypt_integration_credentials(combined_credentials)
@@ -1188,7 +1058,7 @@ async def save_integration_credentials_endpoint(request: SaveIntegrationCredenti
 
         # Step 6: Perform fuzzy matching using OrganizationMatcher
         try:
-            from security_reporting_system.src.utils.organization_matcher import OrganizationMatcher
+            from app.services.organizations.matcher import OrganizationMatcher
 
             matcher = OrganizationMatcher()
             organization_mappings = matcher.match_organizations(
@@ -1426,10 +1296,7 @@ async def save_security_report_endpoint(
         logger.info("Successfully fetched report JSON from GenerateSecurityReportJSON")
 
         # Step 2: Initialize Supabase client
-        from supabase import create_client
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-        supabase = create_client(supabase_url, supabase_key)
+        from app.core.database.supabase_services import supabase
 
         # Step 3: Parse month from month_year format (e.g., "november_2024")
         organization_data = json_response.get("organization", {})
@@ -1678,10 +1545,7 @@ async def get_saved_security_report_endpoint(
         logger.info(f"Parsed month: {report_month}, year: {report_year}")
 
         # Step 2: Initialize Supabase client
-        from supabase import create_client
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-        supabase = create_client(supabase_url, supabase_key)
+        from app.core.database.supabase_services import supabase
 
         # Step 3: Query generated_reports table
         logger.info(f"Querying generated_reports for org_id={org_id}, month={report_month}, year={report_year}")
