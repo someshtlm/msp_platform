@@ -14,11 +14,11 @@ security_reporting_system/.env
 # ===== NGROK (TUNNELING TOOL) =====
 # Exclude entire ngrok directory and all variations
 ngrok/
-ngrok-v3-stable-windows-amd64/
+app/ngrok-v3-stable-windows-amd64/
 **/ngrok*/
 ngrok.exe
 ngrok
-
+backups
 # ===== PYTHON CACHE & COMPILED FILES =====
 __pycache__/
 *.py[cod]
