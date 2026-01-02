@@ -1,8 +1,78 @@
-/.venv
-./msp_endpoints/.env
-./security_reporting_system/.idea
-./security_reporting_system/.env
-./msp_endpoints/update_credentials.py
-./msp_endpoints/test.py
-./security_reporting_system/.idea
-./security_reporting_system/ninja_endpoint_tester.py
+# ===== LOCAL DEVELOPMENT FILES =====
+# All local-only files are in /local/ folder
+local/
+
+# ===== ENVIRONMENT VARIABLES =====
+.env
+.env.local
+.env.*.local
+*.env
+**/.env
+msp_endpoints/.env
+security_reporting_system/.env
+
+# ===== NGROK (TUNNELING TOOL) =====
+# Exclude entire ngrok directory and all variations
+ngrok/
+app/ngrok-v3-stable-windows-amd64/
+**/ngrok*/
+ngrok.exe
+ngrok
+backups
+# ===== PYTHON CACHE & COMPILED FILES =====
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+*.so
+.Python
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== VIRTUAL ENVIRONMENTS =====
+.venv/
+venv/
+ENV/
+env/
+
+# ===== IDEs & EDITORS =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+security_reporting_system/.idea
+
+# ===== PROJECT-SPECIFIC FILES (from existing .gitignore) =====
+CACHE_TEST_GUIDE_UPDATED.md
+update_credentials.py
+test.py
+ninja_endpoint_tester.py
+ninjaone_endpoint_tester.py
+msp_endpoints/update_credentials.py
+msp_endpoints/test.py
+security_reporting_system/ninja_endpoint_tester.py
+
+# ===== OUTPUT & LOGS =====
+*.log
+*.log.*
+output/
+*.pdf
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.bak
+temp/
+tmp/
+
+# ===== OS-SPECIFIC =====
+Thumbs.db
+desktop.ini
+
+# ===== DISTRIBUTION / PACKAGING =====
+build/
+dist/
+*.egg-info/
