@@ -101,18 +101,18 @@ async def validation_exception_handler(request, exc: RequestValidationError):
     )
 
 
-# Import routers from endpoints folder
-from endpoints.security_issues import router as security_router
-from endpoints.mfa_status import router as mfa_router
-from endpoints.license_management import router as license_router
-from endpoints.user_details import router as user_router
-from endpoints.microsoft_secure_score import router as secure_router
-from endpoints.all_complaince_status import router as all_router
-from endpoints.complaince_status_post_endpoints import router as post_router
-from endpoints.client_management import router as client_router
-from endpoints.report_endpoint import router as report_router
-from endpoints.cache_test_endpoints import router as cache_test_router
-from endpoints.integration_platform_charts_endpoints import router as integration_platform_router
+# Import routers from routes folder
+from app.routes.security.issues import router as security_router
+from app.routes.security.mfa import router as mfa_router
+from app.routes.admin.licenses import router as license_router
+from app.routes.clients.users import router as user_router
+from app.routes.security.secure_score import router as secure_router
+from app.routes.compliance.status import router as all_router
+from app.routes.compliance.status_post import router as post_router
+from app.routes.admin.clients import router as client_router
+from app.routes.security.reports import router as report_router
+from app.routes.security.cache_test import router as cache_test_router
+from app.routes.clients.charts import router as integration_platform_router
 
 
 

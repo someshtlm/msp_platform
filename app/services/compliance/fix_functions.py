@@ -11,7 +11,7 @@ FUNCTION_PREFIX = '''    try:
 
         # Get client_id
         if identifier_type == "ninjaone_org_id":
-            from supabase_services import supabase
+            from app.core.database.supabase_services import supabase
             response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
             if not response.data or len(response.data) == 0:
                 raise Exception(f"No client_id found for ninjaone_org_id: {identifier}")

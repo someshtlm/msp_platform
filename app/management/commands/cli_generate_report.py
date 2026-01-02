@@ -40,14 +40,9 @@ from app.utils.month_selector import MonthSelector
 try:
     from app.reports.pdf_report_generator import generate_security_report
     PDF_AVAILABLE = True
-except ImportError:
-    try:
-        # Fallback to old location if not yet migrated
-        from security_reporting_system.src.reports.pdf_report_generator import generate_security_report
-        PDF_AVAILABLE = True
-    except ImportError as e:
-        PDF_AVAILABLE = False
-        print(f"PDF dependencies not available: {e}")
+except ImportError as e:
+    PDF_AVAILABLE = False
+    # PDF generator not available - will show warning if PDF output requested
 
 # Configure logging for production use
 logging.basicConfig(
@@ -67,6 +62,8 @@ async def main() -> None:
                         help='NEW: Account ID for fetching credentials from integration_credentials table')
     parser.add_argument('--org-id', type=int,
                         help='NEW: Organization ID for fetching org-specific IDs from organizations table')
+    parser.add_argument('--credential-id', type=str,
+                        help='[LEGACY] Legacy credential ID from old user_credentials table (deprecated, use --account-id and --org-id)')
     parser.add_argument('--ninjaone-org-id', type=str, default='41',
                         help='[DEPRECATED] NinjaOne Organization ID for report generation. Use --org-id instead.')
     parser.add_argument('--company-id', type=int, default=625,

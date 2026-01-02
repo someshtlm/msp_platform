@@ -6,7 +6,7 @@ Transforms database columns to frontend JSON format matching original endpoints 
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
-from supabase_services import supabase
+from app.core.database.supabase_services import supabase
 
 logger = logging.getLogger(__name__)
 

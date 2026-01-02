@@ -4,23 +4,10 @@ import httpx
 import logging
 import base64
 import requests
-import sys
-import os
 from typing import List, Dict
 
-# Add path resolution for local running
-current_dir = os.path.dirname(os.path.abspath(__file__))
-security_system_root = os.path.join(current_dir, '..', '..')
-if security_system_root not in sys.path:
-    sys.path.insert(0, security_system_root)
-
-# Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-try:
-    from security_reporting_system.src.services.organization_service import OrganizationMappingService
-    from security_reporting_system.config.config import config_manager
-except ImportError:
-    from src.services.organization_service import OrganizationMappingService
-    from config.config import config_manager
+from app.services.organizations.service import OrganizationMappingService
+from app.core.config.settings import config_manager
 
 logger = logging.getLogger(__name__)
 

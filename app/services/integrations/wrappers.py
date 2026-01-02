@@ -12,7 +12,7 @@ async def list_sharepoint_external_resharing_status_endpoint(credentials: tuple 
     """External endpoint for SharePoint External Resharing Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -26,7 +26,7 @@ async def list_unified_auditing_status_endpoint(credentials: tuple = Depends(get
     """External endpoint for Unified Auditing Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -40,7 +40,7 @@ async def list_high_risk_users_signin_policies_endpoint(credentials: tuple = Dep
     """External endpoint for High Risk Users Policies"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -54,7 +54,7 @@ async def list_risky_signin_policies_endpoint(credentials: tuple = Depends(get_c
     """External endpoint for Risky Sign-In Policies"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -79,7 +79,7 @@ async def list_guest_user_access_permissions_endpoint(credentials: tuple = Depen
     """External endpoint for Guest User Access Permissions"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -93,7 +93,7 @@ async def list_sharepoint_site_creation_status_endpoint(credentials: tuple = Dep
     """External endpoint for SharePoint Site Creation Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -107,7 +107,7 @@ async def list_weak_authenticator_status_endpoint(credentials: tuple = Depends(g
     """External endpoint for Weak Authenticator Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -121,7 +121,7 @@ async def list_global_admins_endpoint(credentials: tuple = Depends(get_client_cr
     """External endpoint for Global Admins"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -135,7 +135,7 @@ async def check_password_expiration_policy_endpoint(credentials: tuple = Depends
     """External endpoint for Password Expiration Policy"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -149,7 +149,7 @@ async def list_spf_policy_status_endpoint(credentials: tuple = Depends(get_clien
     """External endpoint for SPF Policy Status"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -163,7 +163,7 @@ async def check_teams_external_access_endpoint(credentials: tuple = Depends(get_
     """External endpoint for Teams External Access"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -177,7 +177,7 @@ async def list_risky_country_locations_endpoint(credentials: tuple = Depends(get
     """External endpoint for Risky Country Locations"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:
@@ -191,7 +191,7 @@ async def list_connected_apps_user_consents_endpoint(credentials: tuple = Depend
     """External endpoint for Connected Apps User Consents"""
     identifier, identifier_type = credentials
     if identifier_type == "ninjaone_org_id":
-        from supabase_services import supabase
+        from app.core.database.supabase_services import supabase
         response = supabase.table('organization_mapping').select('client_id').eq('ninjaone_org_id', identifier).execute()
         client_id = response.data[0]['client_id']
     else:

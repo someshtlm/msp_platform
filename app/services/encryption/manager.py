@@ -19,10 +19,15 @@ class EncryptionManager:
 
         self.master_key = master_key.encode()
 
-    def _derive_key(self, salt: bytes = None) -> Fernet:
+    def _derive_key(self, salt: bytes = None, use_integration_salt: bool = False) -> Fernet:
         """Derive encryption key from master key"""
         if salt is None:
-            salt = b'stable_salt_12345678'  # Use consistent salt for same data
+            if use_integration_salt:
+                # For integration_credentials table (from encryption_manager_backup.py)
+                salt = b'stable_salt_12345678'
+            else:
+                # For m365_credentials table (from crypto_utils_backup.py)
+                salt = b'stable_salt_for_consistency'
 
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -57,7 +62,7 @@ class EncryptionManager:
             decrypted_bytes = f.decrypt(encrypted_bytes)
             return decrypted_bytes.decode()
         except Exception as e:
-            logger.error(f"Decryption failed: {e}")
+            logger.error(f"Decryption failed: {type(e).__name__}: {str(e)}")
             raise
 
     # Backward compatibility aliases from crypto_utils.py
@@ -133,8 +138,8 @@ class EncryptionManager:
             # Convert credentials dict to JSON string
             credentials_json = json.dumps(credentials)
 
-            # Encrypt the entire JSON string
-            f = self._derive_key()
+            # Encrypt the entire JSON string using integration salt
+            f = self._derive_key(use_integration_salt=True)
             encrypted_bytes = f.encrypt(credentials_json.encode())
             encrypted_blob = base64.urlsafe_b64encode(encrypted_bytes).decode()
 
@@ -163,8 +168,8 @@ class EncryptionManager:
 
             encrypted_blob = encrypted_data["encrypted"]
 
-            # Decrypt the blob
-            f = self._derive_key()
+            # Decrypt the blob using integration salt
+            f = self._derive_key(use_integration_salt=True)
             encrypted_bytes = base64.urlsafe_b64decode(encrypted_blob.encode())
             decrypted_bytes = f.decrypt(encrypted_bytes)
             decrypted_json = decrypted_bytes.decode()
@@ -177,7 +182,7 @@ class EncryptionManager:
 
             return credentials
         except Exception as e:
-            logger.error(f"Failed to decrypt integration credentials: {e}")
+            logger.error(f"Failed to decrypt integration credentials: {type(e).__name__}: {str(e)}", exc_info=True)
             raise
 
     def _transform_to_nested_structure(self, credentials: dict) -> dict:

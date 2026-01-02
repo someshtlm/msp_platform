@@ -8,6 +8,6 @@ if __name__ == "__main__":
 
     # Run the FastAPI app locally
     # - host: localhost only (change to 0.0.0.0 for external access)
-    # - port: 9000 (default port for this application)
+    # - port: 8080 (default port for this application)
     # - reload: Auto-reload on code changes (development only)
-    uvicorn.run(app, host="127.0.0.1", port=9000, log_level="info", reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8080, log_level="info", reload=True)

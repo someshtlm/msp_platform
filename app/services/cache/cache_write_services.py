@@ -6,7 +6,7 @@ Phase 2: Fetches fresh data and writes to cache.
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
-from supabase_services import supabase, get_organization_credentials
+from app.core.database.supabase_services import supabase, get_organization_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ async def write_licenses_to_cache(org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -69,7 +69,7 @@ async def write_licenses_to_cache(org_id: int) -> bool:
         )
 
         # Step 3: Call endpoint with token directly via internal call
-        from endpoints.license_management import get_license_summary
+        from app.routes.admin.licenses import get_license_summary
         credentials = (str(org_id), "org_id")
         response = await get_license_summary(credentials=credentials)
 
@@ -144,7 +144,7 @@ async def write_mfa_to_cache(org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -152,7 +152,7 @@ async def write_mfa_to_cache(org_id: int) -> bool:
         )
 
         # Step 3: Call existing endpoint logic with clientId
-        from endpoints.mfa_status import get_mfa_compliance_report
+        from app.routes.security.mfa import get_mfa_compliance_report
         response = await get_mfa_compliance_report(clientId=creds['client_id'], org_id=None)
 
         # Step 3: Check if response is valid
@@ -231,7 +231,7 @@ async def write_compliance_to_cache(org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -239,7 +239,7 @@ async def write_compliance_to_cache(org_id: int) -> bool:
         )
 
         # Step 3: Call existing endpoint logic with org_id
-        from endpoints.all_complaince_status import get_all_compliance_status
+        from app.routes.compliance.status import get_all_compliance_status
         response = await get_all_compliance_status(clientId=None, org_id=org_id)
 
         # Step 4: Check if response is valid (returns dict, not GraphApiResponse)
@@ -314,7 +314,7 @@ async def write_secure_score_to_cache(org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -322,7 +322,7 @@ async def write_secure_score_to_cache(org_id: int) -> bool:
         )
 
         # Step 3: Call existing endpoint logic with clientId
-        from endpoints.microsoft_secure_score import get_microsoft_secure_score
+        from app.routes.security.secure_score import get_microsoft_secure_score
         response = await get_microsoft_secure_score(clientId=creds['client_id'], org_id=None)
 
         # Step 3: Check if response is valid
@@ -401,7 +401,7 @@ async def write_users_to_cache(org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -409,7 +409,7 @@ async def write_users_to_cache(org_id: int) -> bool:
         )
 
         # Step 3: Call existing endpoint logic with credentials tuple
-        from endpoints.user_details import list_users
+        from app.routes.clients.users import list_users
         credentials = (str(org_id), "org_id")
         response = await list_users(credentials=credentials)
 
@@ -543,7 +543,7 @@ async def write_user_details_to_cache(user_id: str, org_id: int) -> bool:
             return False
 
         # Step 2: Get token directly from credentials (no database lookup!)
-        from auth import get_access_token_from_credentials
+        from app.core.auth.middleware import get_access_token_from_credentials
         token = await get_access_token_from_credentials(
             creds['tenant_id'],
             creds['client_id'],
@@ -551,7 +551,7 @@ async def write_user_details_to_cache(user_id: str, org_id: int) -> bool:
         )
 
         # Step 3: Call existing endpoint logic with credentials tuple
-        from endpoints.user_details import get_user_details
+        from app.routes.clients.users import get_user_details
         credentials = (str(org_id), "org_id")
         response = await get_user_details(user_id=user_id, credentials=credentials)
 

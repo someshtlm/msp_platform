@@ -958,26 +958,26 @@ PHASE 14: MOVE MAIN APP & RUN SCRIPT
                   git push
 
 
-PHASE 15: UPDATE IMPORTS - CLIENT MODULES
+PHASE 16: UPDATE IMPORTS - CLIENT MODULES
 ------------------------------------------
-[ ] 16.1 Update app/clients/api_client.py imports
+[ ✓] 16.1 Update app/clients/ninjaone_client.py imports
          OLD: from security_reporting_system.config.config import config_manager
          NEW: from app.core.config.settings import config_manager
 
-[ ] 16.2 Update app/clients/autotask_client.py imports
+[✓ ] 16.2 Update app/clients/autotask_client.py imports
          (Same pattern as above)
 
-[ ] 16.3 Update app/clients/bitdefender_client.py imports
+[ ✓] 16.3 Update app/clients/bitdefender_client.py imports
          (Same pattern)
 
-[ ] 16.4 Update app/clients/connectsecure_client.py imports
+[✓ ] 16.4 Update app/clients/connectsecure_client.py imports
          (Same pattern)
 
-[ ] 16.5 Update app/clients/cove_client.py imports
+[ ✓] 16.5 Update app/clients/cove_client.py imports
          OLD: from security_reporting_system.src.services.encryption_manager import EncryptionManager
          NEW: from app.services.encryption.manager import EncryptionManager
 
-[ ] 16.6 Commit client import updates
+[ ✓] 16.6 Commit client import updates
          Command: git add app/clients/
                   git commit -m "refactor: update imports in client modules"
                   git push
@@ -985,28 +985,28 @@ PHASE 15: UPDATE IMPORTS - CLIENT MODULES
 
 PHASE 17: UPDATE IMPORTS - PROCESSOR MODULES
 ---------------------------------------------
-[ ] 17.1 Update app/processors/ninjaone_processor.py
+[✓ ] 17.1 Update app/processors/ninjaone_processor.py
          OLD: from security_reporting_system.src.clients.api_client import NinjaOneAPIClient
          NEW: from app.clients.api_client import NinjaOneAPIClient
 
-[ ] 17.2 Update app/processors/autotask_processor.py
+[✓ ] 17.2 Update app/processors/autotask_processor.py
          OLD: from security_reporting_system.src.clients.autotask_client import ...
          NEW: from app.clients.autotask_client import ...
 
-[ ] 17.3 Update app/processors/bitdefender_processor.py
+[✓ ] 17.3 Update app/processors/bitdefender_processor.py
          OLD: from security_reporting_system.src.services.encryption_manager import EncryptionManager
          NEW: from app.services.encryption.manager import EncryptionManager
 
-[ ] 17.4 Update app/processors/connectsecure_processor.py
+[ ✓] 17.4 Update app/processors/connectsecure_processor.py
          (Same pattern)
 
-[ ] 17.5 Update app/processors/cove_processor.py
+[✓ ] 17.5 Update app/processors/cove_processor.py
          OLD: from security_reporting_system.src.clients.cove_client import CoveClient
               from security_reporting_system.src.services.encryption_manager import EncryptionManager
          NEW: from app.clients.cove_client import CoveClient
               from app.services.encryption.manager import EncryptionManager
 
-[ ] 17.6 Commit processor import updates
+[✓ ] 17.6 Commit processor import updates
          Command: git add app/processors/
                   git commit -m "refactor: update imports in processor modules"
                   git push
@@ -1499,3 +1499,19 @@ NEXT STEPS:
 ================================================================================
                                 END OF PLAN
 ================================================================================
+1) updated imports in /clients
+2) updated imports in /processors
+3) updated imports and scripts in routes/admin
+4) updated imports in routes/clients
+5) updated imports in routes/compliance
+6) updated imports in routes/security
+7) updated imports in utils
+8) updated /core scripts imports
+9) updated imports changes in /management
+10) updated changes in /schemas
+11) updated import changes in /services cache,compliance and encryption
+12)updated import changes in /services/integrations
+13)updated import changes in /services/organizations
+14)updated import changes in app/main.py
+
+

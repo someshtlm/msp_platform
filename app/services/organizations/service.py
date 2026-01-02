@@ -3,19 +3,8 @@ import re
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-# Add path resolution for local running
-import sys
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-security_system_root = os.path.join(current_dir, '..', '..')
-if security_system_root not in sys.path:
-    sys.path.insert(0, security_system_root)
 
-# Smart imports - try absolute first (for msp_endpoints), fallback to relative (for standalone)
-try:
-    from security_reporting_system.config.supabase_client import SupabaseCredentialManager
-except ImportError:
-    from config.supabase_client import SupabaseCredentialManager
+from app.core.config.supabase import SupabaseCredentialManager
 
 logger = logging.getLogger(__name__)
 
