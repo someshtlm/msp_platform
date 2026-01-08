@@ -463,41 +463,76 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
             )
 
         # ================================================================
-        # Step 5: Insert chart selections
+        # Step 5: Update chart selections (Handle both select AND deselect)
         # ================================================================
         charts_saved = 0
-        if chart_ids:
-            try:
-                existing_charts_response = supabase.table('account_selected_charts')\
-                    .select('chart_id')\
+        try:
+            # STEP 5A: Get ALL available charts for this platform
+            all_platform_charts_response = supabase.table('platform_available_charts')\
+                .select('id')\
+                .eq('integration_id', request.platform_id)\
+                .execute()
+
+            all_platform_chart_ids = {chart['id'] for chart in all_platform_charts_response.data} if all_platform_charts_response.data else set()
+
+            logger.info(f"Platform {request.platform_id} has {len(all_platform_chart_ids)} available charts")
+
+            # STEP 5B: Get currently selected charts for this account AND platform
+            existing_platform_charts_response = supabase.table('account_selected_charts')\
+                .select('chart_id')\
+                .eq('account_id', account_id)\
+                .in_('chart_id', list(all_platform_chart_ids))\
+                .execute()
+
+            existing_chart_ids = {chart['chart_id'] for chart in existing_platform_charts_response.data} if existing_platform_charts_response.data else set()
+
+            logger.info(f"Account {account_id} currently has {len(existing_chart_ids)} selected charts for this platform")
+
+            # STEP 5C: Determine which charts to ADD and which to REMOVE
+            new_chart_ids = set(chart_ids) if chart_ids else set()
+
+            charts_to_add = new_chart_ids - existing_chart_ids  # New selections
+            charts_to_remove = existing_chart_ids - new_chart_ids  # Deselected charts
+
+            logger.info(f"Charts to ADD: {charts_to_add}")
+            logger.info(f"Charts to REMOVE: {charts_to_remove}")
+
+            # STEP 5D: DELETE deselected charts
+            if charts_to_remove:
+                supabase.table('account_selected_charts')\
+                    .delete()\
                     .eq('account_id', account_id)\
-                    .in_('chart_id', chart_ids)\
+                    .in_('chart_id', list(charts_to_remove))\
                     .execute()
 
-                existing_chart_ids = {chart['chart_id'] for chart in existing_charts_response.data} if existing_charts_response.data else set()
+                logger.info(f"✓ Deleted {len(charts_to_remove)} deselected charts for account {account_id}")
 
+            # STEP 5E: INSERT newly selected charts
+            if charts_to_add:
                 charts_to_insert = []
-                for chart_id in chart_ids:
-                    if chart_id not in existing_chart_ids:
-                        charts_to_insert.append({
-                            'account_id': account_id,
-                            'chart_id': chart_id,
-                            'created_at': datetime.now().isoformat(),
-                            'updated_at': datetime.now().isoformat()
-                        })
+                for chart_id in charts_to_add:
+                    charts_to_insert.append({
+                        'account_id': account_id,
+                        'chart_id': chart_id,
+                        'created_at': datetime.now().isoformat(),
+                        'updated_at': datetime.now().isoformat()
+                    })
 
-                if charts_to_insert:
-                    supabase.table('account_selected_charts').insert(charts_to_insert).execute()
-                    charts_saved = len(charts_to_insert)
-                    logger.info(f"Inserted {charts_saved} chart selections for account {account_id}")
+                supabase.table('account_selected_charts').insert(charts_to_insert).execute()
+                logger.info(f"✓ Inserted {len(charts_to_add)} new chart selections for account {account_id}")
 
-            except Exception as e:
-                logger.error(f"Error inserting chart selections: {str(e)}")
-                return GraphApiResponse(
-                    status_code=500,
-                    data={"success": False},
-                    error=f"Failed to save chart selections: {str(e)}"
-                )
+            charts_saved = len(new_chart_ids)
+            logger.info(f"Chart selections updated: {charts_saved} total charts now selected for platform {request.platform_id}")
+
+        except Exception as e:
+            logger.error(f"Error updating chart selections: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return GraphApiResponse(
+                status_code=500,
+                data={"success": False},
+                error=f"Failed to save chart selections: {str(e)}"
+            )
 
         logger.info(f"✓ SavePlatformCredentials completed successfully for account {account_id}")
 
