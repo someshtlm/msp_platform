@@ -113,10 +113,10 @@ class CoveProcessor:
 
         metrics = {}
 
-        # Extract data from API response
-        result_data = raw_data.get('result', {})
-        devices = result_data.get('result', [])  # Array of device records
-        total_statistics = result_data.get('totalStatistics', [])
+        # Extract data from API response (use 'or' to handle None values)
+        result_data = raw_data.get('result') or {}
+        devices = result_data.get('result') or []  # Array of device records
+        total_statistics = result_data.get('totalStatistics') or []
 
         # ============================================================
         # 1. Total Storage Used (from totalStatistics)
@@ -182,7 +182,7 @@ class CoveProcessor:
         device_dist = {"Workstation": 0, "Server": 0, "Undefined": 0}
 
         for device in devices:
-            settings = device.get('Settings', [])
+            settings = device.get('Settings') or []
             for setting in settings:
                 if 'I32' in setting:
                     os_type = setting['I32']
@@ -206,7 +206,7 @@ class CoveProcessor:
         asset_dist = {"Physical": 0, "Virtual": 0, "Undefined": 0}
 
         for device in devices:
-            settings = device.get('Settings', [])
+            settings = device.get('Settings') or []
             for setting in settings:
                 if 'I81' in setting:
                     physicality = str(setting['I81']).lower()
@@ -226,7 +226,7 @@ class CoveProcessor:
         retention_dist = {}
 
         for device in devices:
-            settings = device.get('Settings', [])
+            settings = device.get('Settings') or []
             policy = None
 
             for setting in settings:
