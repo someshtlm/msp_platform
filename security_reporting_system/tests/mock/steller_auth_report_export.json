@@ -1,0 +1,28 @@
+{
+  "sections": [
+    {
+      "title": "User Login Location Anomaly Documents",
+      "rows": [
+        {
+          "event_time": "2024-02-10T08:12:00Z",
+          "user_id": "john.doe",
+          "source_ip": "10.10.10.5",
+          "source_host": "WIN-DC01",
+          "distance_km": 5200,
+          "alert_score": 85
+        }
+      ]
+    },
+    {
+      "title": "Top 20 Login Failures by Top Users",
+      "rows": [
+        { "user_id": "john.doe", "count": 14 },
+        { "user_id": "alice", "count": 9 }
+      ]
+    },
+    {
+      "title": "Top 20 Account Lockouts by Top Users - Windows",
+      "rows": []
+    }
+  ]
+}
