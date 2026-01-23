@@ -355,12 +355,12 @@ class FrontendTransformer:
                             "managedEndpoints": 0
                         },
                         "riskScore_bitdefender": {
-                            "value": 0,
-                            "impact": 0,
-                            "misconfigurations": 0,
-                            "appVulnerabilities": 0,
-                            "humanRisks": 0,
-                            "industryModifier": 0
+                            "value": "0",
+                            "impact": "0",
+                            "misconfigurations": "0",
+                            "appVulnerabilities": "0",
+                            "humanRisks": "0",
+                            "industryModifier": "0"
                         },
                         "inventory_summary_bitdefender": {
                             "summary": {

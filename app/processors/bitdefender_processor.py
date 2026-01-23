@@ -177,16 +177,16 @@ class BitdefenderProcessor:
             return datetime.now().strftime("%m/%Y")
 
     def _process_risk_score(self, company_details: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and format risk score data with null-safe defaults"""
+        """Extract and format risk score data with null-safe string defaults"""
         risk_score = company_details.get("riskScore", {}) or {}
 
         return {
-            "value": risk_score.get("value", 0) or 0,
-            "impact": risk_score.get("impact", 0) or 0,
-            "misconfigurations": risk_score.get("misconfigurations", 0) or 0,
-            "appVulnerabilities": risk_score.get("appVulnerabilities", 0) or 0,
-            "humanRisks": risk_score.get("humanRisks", 0) or 0,
-            "industryModifier": risk_score.get("industryModifier", 0) or 0
+            "value": str(risk_score.get("value", 0) or 0),
+            "impact": str(risk_score.get("impact", 0) or 0),
+            "misconfigurations": str(risk_score.get("misconfigurations", 0) or 0),
+            "appVulnerabilities": str(risk_score.get("appVulnerabilities", 0) or 0),
+            "humanRisks": str(risk_score.get("humanRisks", 0) or 0),
+            "industryModifier": str(risk_score.get("industryModifier", 0) or 0)
         }
 
     def _process_2fa_status(self, company_details: Dict[str, Any]) -> bool:
