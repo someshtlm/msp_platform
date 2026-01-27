@@ -434,28 +434,42 @@ class FrontendTransformer:
 
         # Fetch account_name from accounts table using account_id
         company_name = "Unknown Company"  # Default fallback
+
+        logger.info(f"🔍 DEBUG _extract_organization_info: account_id passed = {account_id}")
+
         if account_id:
             try:
-                # Use old script import path structure
+                logger.info(f"🔍 DEBUG: Attempting to import SupabaseCredentialManager and fetch account_name for account_id={account_id}")
                 try:
-                    from security_reporting_system.config.supabase_client import supabase
+                    from security_reporting_system.config.supabase_client import SupabaseCredentialManager
                 except ImportError:
-                    from config.supabase_client import supabase
+                    from config.supabase_client import SupabaseCredentialManager
 
+                logger.info(f"🔍 DEBUG: Successfully imported SupabaseCredentialManager, now getting supabase client")
+                supabase_manager = SupabaseCredentialManager()
+                supabase = supabase_manager.supabase
+
+                logger.info(f"🔍 DEBUG: Got supabase client, now querying accounts table")
                 account_response = supabase.table('accounts')\
                     .select('account_name')\
                     .eq('id', account_id)\
                     .limit(1)\
                     .execute()
 
+                logger.info(f"🔍 DEBUG: Query executed, response.data = {account_response.data}")
+
                 if account_response.data and len(account_response.data) > 0:
                     company_name = account_response.data[0].get('account_name', 'Unknown Company')
-                    logger.info(f"Fetched company name: {company_name} for account_id: {account_id}")
+                    logger.info(f"✅ Fetched company name: {company_name} for account_id: {account_id}")
                 else:
-                    logger.warning(f"No account found for account_id: {account_id}")
+                    logger.warning(f"⚠️ No account found for account_id: {account_id}")
             except Exception as e:
-                logger.error(f"Failed to fetch account_name from accounts table: {e}")
+                logger.error(f"❌ Failed to fetch account_name from accounts table: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 # Fallback to default
+        else:
+            logger.warning(f"⚠️ account_id is None/empty, cannot fetch company name")
 
         return {
             "id": execution_info.get("organization_id", "unknown"),
