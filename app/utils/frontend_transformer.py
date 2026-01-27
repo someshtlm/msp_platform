@@ -61,7 +61,7 @@ class FrontendTransformer:
             frontend_json = {}
 
             try:
-                frontend_json["organization"] = self._extract_organization_info(full_data, reporting_period)
+                frontend_json["organization"] = self._extract_organization_info(full_data, reporting_period, account_id)
             except Exception as e:
                 logger.warning(f"Failed to extract organization info: {e}")
                 frontend_json["organization"] = {"id": "unknown", "name": "Unknown Organization"}
@@ -419,8 +419,8 @@ class FrontendTransformer:
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return self._create_error_response(str(e))
 
-    def _extract_organization_info(self, data: Dict[str, Any], reporting_period: str = None) -> Dict[str, Any]:
-        """Extract organization information."""
+    def _extract_organization_info(self, data: Dict[str, Any], reporting_period: str = None, account_id: int = None) -> Dict[str, Any]:
+        """Extract organization information with dynamic company name from accounts table."""
         execution_info = data.get("execution_info", {})
 
         # Use provided reporting_period, fallback to execution_info, then current month
@@ -429,12 +429,32 @@ class FrontendTransformer:
         if not reporting_period:
             reporting_period = datetime.now().strftime("%B %Y")
 
+        # Fetch account_name from accounts table using account_id
+        company_name = "Unknown Company"  # Default fallback
+        if account_id:
+            try:
+                from app.core.database.supabase_services import supabase
+                account_response = supabase.table('accounts')\
+                    .select('account_name')\
+                    .eq('id', account_id)\
+                    .limit(1)\
+                    .execute()
+
+                if account_response.data and len(account_response.data) > 0:
+                    company_name = account_response.data[0].get('account_name', 'Unknown Company')
+                    logger.info(f"Fetched company name: {company_name} for account_id: {account_id}")
+                else:
+                    logger.warning(f"No account found for account_id: {account_id}")
+            except Exception as e:
+                logger.error(f"Failed to fetch account_name from accounts table: {e}")
+                # Fallback to default
+
         return {
             "id": execution_info.get("organization_id", "unknown"),
             "name": execution_info.get("organization_name", "Unknown Organization"),
             "report_date": execution_info.get("timestamp", datetime.now().isoformat()),
             "created_by": "Security Reporting System",
-            "company": "TeamLogic IT",
+            "company": company_name,
             "reporting_period": reporting_period
         }
 
