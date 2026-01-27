@@ -436,7 +436,12 @@ class FrontendTransformer:
         company_name = "Unknown Company"  # Default fallback
         if account_id:
             try:
-                from app.core.database.supabase_services import supabase
+                # Use old script import path structure
+                try:
+                    from security_reporting_system.config.supabase_client import supabase
+                except ImportError:
+                    from config.supabase_client import supabase
+
                 account_response = supabase.table('accounts')\
                     .select('account_name')\
                     .eq('id', account_id)\
