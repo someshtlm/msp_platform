@@ -15,11 +15,6 @@ class StellarCyberClient:
     - Handle authentication
     - Call Stellar Cyber endpoints
     - Return raw responses
-
-    This class MUST NOT:
-    - Perform aggregation
-    - Perform filtering
-    - Interpret report semantics
     """
 
     def __init__(self, base_url: str, api_token: str, timeout: int = 30):
