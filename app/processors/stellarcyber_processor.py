@@ -121,11 +121,6 @@ class StellarCyberProcessor:
             "raw_counts": counts
         }
 
-# app/processors/stellarcyber_processor.py (process_all_data part)
-
-
-class StellarCyberProcessor:
-
     # ... __init__ and fetch_all_data already defined ...
 
     # --------------------------------------------------

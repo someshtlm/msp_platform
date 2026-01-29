@@ -62,7 +62,7 @@ class StellarCyberClient:
         Returns:
             List of raw report configuration objects
         """
-        url = f"{self.base_url}/connect/api/v1/report-configs"
+        url = f"{self.base_url}/connect/api/v1/report-config"
         logger.debug(f"Fetching Stellar Cyber report configs: {url}")
 
         response = requests.get(
@@ -90,7 +90,7 @@ class StellarCyberClient:
         if not report_id:
             raise ValueError("report_id is required")
 
-        url = f"{self.base_url}/connect/api/v1/report-configs/{report_id}/data"
+        url = f"{self.base_url}/connect/api/v1/report-config/{report_id}/data"
         logger.debug(f"Fetching Stellar Cyber report data: {url}")
 
         response = requests.get(
@@ -118,7 +118,7 @@ class StellarCyberClient:
         if not report_id:
             raise ValueError("report_id is required")
 
-        url = f"{self.base_url}/connect/api/v1/report-configs/{report_id}/export"
+        url = f"{self.base_url}/connect/api/v1/report-config/{report_id}/export"
         logger.debug(f"Exporting Stellar Cyber report: {url}")
 
         response = requests.get(
