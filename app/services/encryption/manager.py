@@ -12,7 +12,7 @@ class EncryptionManager:
     def __init__(self, master_key: str = None):
         """Initialize with master key from environment"""
         if not master_key:
-            master_key = os.getenv('ENCRYPTION_KEY')  # Changed from MASTER_ENCRYPTION_KEY
+            master_key = os.getenv('ENCRYPTION_KEY')
 
         if not master_key:
             raise ValueError("ENCRYPTION_KEY not found in environment")

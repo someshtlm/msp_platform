@@ -556,3 +556,322 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
             data={"success": False},
             error=f"Internal server error: {str(e)}"
         )
+
+
+# ============================================================================
+# SMTP CREDENTIALS ENDPOINTS
+# ============================================================================
+
+# @router.get("/GetSMTPCredentials", response_model=GraphApiResponse, summary="Get SMTP Credentials for User")
+# async def get_smtp_credentials(u_id: str):
+#     """
+#     Get SMTP credentials for a user with password masked for security.
+#
+#     Query Parameters:
+#     - u_id: User UUID from auth.users
+#
+#     Returns credentials in frontend format:
+#     ```json
+#     {
+#         "status_code": 200,
+#         "data": {
+#             "senderEmail": "pratik@inputiv.com",
+#             "smtpServer": "smtp-mail.outlook.com",
+#             "appPassword": "****",
+#             "isActive": true,
+#             "lastUsed": "2026-01-09T10:30:00",
+#             "createdAt": "2026-01-08T15:00:00",
+#             "updatedAt": "2026-01-09T10:30:00"
+#         },
+#         "error": null
+#     }
+#     ```
+#     """
+#     try:
+#         logger.info(f"GetSMTPCredentials called for u_id: {u_id}")
+#
+#         # ================================================================
+#         # Step 1: Get account_id from u_id
+#         # ================================================================
+#         try:
+#             account_response = supabase.rpc('get_account_id_from_uid', {'user_uid': u_id}).execute()
+#
+#             if not account_response.data:
+#                 logger.warning(f"User not found for u_id: {u_id}")
+#                 return GraphApiResponse(
+#                     status_code=404,
+#                     data=None,
+#                     error="User not found"
+#                 )
+#
+#             account_id = account_response.data
+#             logger.info(f"Found account_id: {account_id} for u_id: {u_id}")
+#
+#         except Exception as e:
+#             logger.error(f"Error fetching account_id from u_id: {str(e)}")
+#             return GraphApiResponse(
+#                 status_code=500,
+#                 data=None,
+#                 error=f"Failed to retrieve account information: {str(e)}"
+#             )
+#
+#         # ================================================================
+#         # Step 2: Fetch SMTP credentials for this account
+#         # ================================================================
+#         try:
+#             creds_response = supabase.table('account_smtp_credentials')\
+#                 .select('smtp_email, app_password, smtp_server, is_active, last_used, created_at, updated_at')\
+#                 .eq('account_id', account_id)\
+#                 .eq('is_active', True)\
+#                 .execute()
+#
+#             if not creds_response.data or len(creds_response.data) == 0:
+#                 logger.info(f"No SMTP credentials found for account {account_id}")
+#                 return GraphApiResponse(
+#                     status_code=404,
+#                     data=None,
+#                     error="No SMTP credentials found for this account"
+#                 )
+#
+#             creds = creds_response.data[0]
+#             logger.info(f"Found SMTP credentials for account {account_id}")
+#
+#             # ================================================================
+#             # Step 3: Decrypt app_password and return actual values
+#             # ================================================================
+#             from app.services.encryption.smtp_encryption import SMTPEncryptionService
+#
+#             encryption_service = SMTPEncryptionService()
+#
+#             try:
+#                 # Decrypt the app_password from database
+#                 decrypted_password = encryption_service.decrypt_app_password(creds['app_password'])
+#                 logger.info(f"✓ Successfully decrypted app_password for account {account_id}")
+#             except Exception as e:
+#                 logger.error(f"Failed to decrypt app_password: {e}")
+#                 return GraphApiResponse(
+#                     status_code=500,
+#                     data=None,
+#                     error=f"Failed to decrypt credentials: {str(e)}"
+#                 )
+#
+#             return GraphApiResponse(
+#                 status_code=200,
+#                 data={
+#                     "senderEmail": creds['smtp_email'],
+#                     "smtpServer": creds['smtp_server'],
+#                     "appPassword": decrypted_password,  # ← ACTUAL DECRYPTED VALUE
+#                     "isActive": creds['is_active'],
+#                     "lastUsed": creds.get('last_used'),
+#                     "createdAt": creds['created_at'],
+#                     "updatedAt": creds['updated_at']
+#                 },
+#                 error=None
+#             )
+#
+#         except Exception as e:
+#             logger.error(f"Error fetching SMTP credentials: {str(e)}")
+#             import traceback
+#             logger.error(f"Traceback: {traceback.format_exc()}")
+#             return GraphApiResponse(
+#                 status_code=500,
+#                 data=None,
+#                 error=f"Failed to fetch SMTP credentials: {str(e)}"
+#             )
+#
+#     except Exception as e:
+#         logger.error(f"Unexpected error in GetSMTPCredentials: {str(e)}")
+#         import traceback
+#         logger.error(f"Traceback: {traceback.format_exc()}")
+#         return GraphApiResponse(
+#             status_code=500,
+#             data=None,
+#             error=f"Internal server error: {str(e)}"
+#         )
+#
+#
+# @router.post("/SaveSMTPCredentials", response_model=GraphApiResponse, summary="Save SMTP Credentials")
+# async def save_smtp_credentials(
+#     uuid: str,
+#     senderEmail: str,
+#     appPassword: str,
+#     smtpServer: str
+# ):
+#     """
+#     Save or update SMTP credentials for an account.
+#
+#     Query Parameters (from frontend):
+#     - uuid: User UUID from auth.users
+#     - senderEmail: SMTP sender email address (e.g., "pratik@inputiv.com")
+#     - appPassword: App password for SMTP (will be encrypted)
+#     - smtpServer: SMTP server hostname (e.g., "smtp-mail.outlook.com")
+#
+#     Example Request:
+#     ```
+#     POST /api/SaveSMTPCredentials
+#     ?uuid=550e8400-e29b-41d4-a716-446655440000
+#     &senderEmail=pratik@inputiv.com
+#     &appPassword=abcd-efgh-ijkl-mnop
+#     &smtpServer=smtp-mail.outlook.com
+#     ```
+#
+#     Response:
+#     ```json
+#     {
+#         "status_code": 200,
+#         "data": {
+#             "success": true,
+#             "action": "created",
+#             "senderEmail": "pratik@inputiv.com",
+#             "credentialId": 1
+#         },
+#         "error": null
+#     }
+#     ```
+#     """
+#     try:
+#         logger.info(f"SaveSMTPCredentials called for user: {uuid}")
+#
+#         # ================================================================
+#         # Step 1: Get account_id from UUID
+#         # ================================================================
+#         try:
+#             account_response = supabase.rpc('get_account_id_from_uid', {'user_uid': uuid}).execute()
+#
+#             if not account_response.data:
+#                 logger.warning(f"User not found for UUID: {uuid}")
+#                 return GraphApiResponse(
+#                     status_code=404,
+#                     data={"success": False},
+#                     error="User not found"
+#                 )
+#
+#             account_id = account_response.data
+#             logger.info(f"Found account_id: {account_id} for UUID: {uuid}")
+#
+#         except Exception as e:
+#             logger.error(f"Error fetching account_id from UUID: {str(e)}")
+#             return GraphApiResponse(
+#                 status_code=500,
+#                 data={"success": False},
+#                 error=f"Failed to retrieve account information: {str(e)}"
+#             )
+#
+#         # ================================================================
+#         # Step 2: Validate SMTP data
+#         # ================================================================
+#         from app.services.encryption.smtp_encryption import SMTPEncryptionService
+#
+#         encryption_service = SMTPEncryptionService()
+#
+#         smtp_data = {
+#             "smtp_email": senderEmail,
+#             "app_password": appPassword,
+#             "smtp_server": smtpServer
+#         }
+#
+#         try:
+#             encryption_service.validate_smtp_data(smtp_data)
+#             logger.info(f"✓ SMTP data validation passed")
+#         except ValueError as e:
+#             logger.warning(f"SMTP data validation failed: {e}")
+#             return GraphApiResponse(
+#                 status_code=400,
+#                 data={"success": False},
+#                 error=f"Validation failed: {str(e)}"
+#             )
+#
+#         # ================================================================
+#         # Step 3: Encrypt app_password
+#         # ================================================================
+#         try:
+#             encrypted_password = encryption_service.encrypt_app_password(appPassword)
+#             logger.info(f"✓ Encrypted app_password (length: {len(encrypted_password)} chars)")
+#         except Exception as e:
+#             logger.error(f"Failed to encrypt app_password: {e}")
+#             return GraphApiResponse(
+#                 status_code=500,
+#                 data={"success": False},
+#                 error=f"Failed to encrypt credentials: {str(e)}"
+#             )
+#
+#         # ================================================================
+#         # Step 4: Check if credentials already exist (UPSERT logic)
+#         # ================================================================
+#         try:
+#             existing_response = supabase.table('account_smtp_credentials')\
+#                 .select('id')\
+#                 .eq('account_id', account_id)\
+#                 .execute()
+#
+#             if existing_response.data and len(existing_response.data) > 0:
+#                 # UPDATE existing credentials
+#                 credential_id = existing_response.data[0]['id']
+#
+#                 supabase.table('account_smtp_credentials')\
+#                     .update({
+#                         'smtp_email': senderEmail,
+#                         'app_password': encrypted_password,
+#                         'smtp_server': smtpServer,
+#                         'is_active': True,
+#                         'updated_at': datetime.now().isoformat()
+#                     })\
+#                     .eq('id', credential_id)\
+#                     .execute()
+#
+#                 logger.info(f"✓ Updated SMTP credentials for account {account_id}, credential_id: {credential_id}")
+#                 action = "updated"
+#
+#             else:
+#                 # INSERT new credentials
+#                 insert_result = supabase.table('account_smtp_credentials')\
+#                     .insert({
+#                         'account_id': account_id,
+#                         'smtp_email': senderEmail,
+#                         'app_password': encrypted_password,
+#                         'smtp_server': smtpServer,
+#                         'is_active': True,
+#                         'created_at': datetime.now().isoformat(),
+#                         'updated_at': datetime.now().isoformat()
+#                     })\
+#                     .execute()
+#
+#                 credential_id = insert_result.data[0]['id']
+#                 logger.info(f"✓ Created new SMTP credentials for account {account_id}, credential_id: {credential_id}")
+#                 action = "created"
+#
+#         except Exception as e:
+#             logger.error(f"Error saving SMTP credentials: {str(e)}")
+#             import traceback
+#             logger.error(f"Traceback: {traceback.format_exc()}")
+#             return GraphApiResponse(
+#                 status_code=500,
+#                 data={"success": False},
+#                 error=f"Failed to save SMTP credentials: {str(e)}"
+#             )
+#
+#         # ================================================================
+#         # Step 5: Return success response (camelCase)
+#         # ================================================================
+#         logger.info(f"✓ SaveSMTPCredentials completed successfully for account {account_id}")
+#
+#         return GraphApiResponse(
+#             status_code=200,
+#             data={
+#                 "success": True,
+#                 "action": action,
+#                 "senderEmail": senderEmail,
+#                 "credentialId": credential_id
+#             },
+#             error=None
+#         )
+#
+#     except Exception as e:
+#         logger.error(f"Unexpected error in SaveSMTPCredentials: {str(e)}")
+#         import traceback
+#         logger.error(f"Traceback: {traceback.format_exc()}")
+#         return GraphApiResponse(
+#             status_code=500,
+#             data={"success": False},
+#             error=f"Internal server error: {str(e)}"
+#         )
