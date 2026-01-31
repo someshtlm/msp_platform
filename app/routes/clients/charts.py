@@ -32,32 +32,7 @@ async def get_platform_list(u_id: str):
     - integrationFields: Required fields for integration WITH pre-filled values
     - chartlist: List of available charts for this platform
 
-    Example Response:
-    ```json
-    {
-        "status_code": 200,
-        "data": [
-            {
-                "platform_id": 1,
-                "name": "Autotask PSA",
-                "description": "Integrate with Autotask PSA",
-                "enabled": true,
-                "integrationFields": [
-                    {
-                        "name": "autotask_secret",
-                        "type": "password",
-                        "label": "Autotask Secret",
-                        "required": true,
-                        "field_info": " ",
-                        "value": "k6q..."
-                    }
-                ],
-                "chartlist": [...]
-            }
-        ],
-        "error": null
-    }
-    ```
+
     """
     try:
         logger.info(f"Fetching integration platforms with credentials for u_id: {u_id}")
@@ -268,42 +243,6 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
     5. Encrypts and saves to integration_credentials table
     6. Inserts chart selections into account_selected_charts table
 
-    Request Payload:
-    ```json
-    {
-        "uuid": "550e8400-e29b-41d4-a716-446655440000",
-        "platform_id": 1,
-        "platform_name": "Autotask PSA",
-        "status": "active",
-        "credentials": {
-            "autotask_username": "user@company.com",
-            "autotask_secret": "password",
-            "autotask_integration_code": "CODE123"
-        },
-        "chartlist_selected_by_user": [
-            {
-                "chart_id": 1,
-                "chart_key": "device_health",
-                "chart_display_name": "Device Health",
-                "chart_type": "bar"
-            }
-        ]
-    }
-    ```
-
-    Response:
-    ```json
-    {
-        "status_code": 200,
-        "data": {
-            "success": true,
-            "platform_name": "Autotask PSA",
-            "charts_saved": 4,
-            "credential_id": 42
-        },
-        "error": null
-    }
-    ```
     """
     try:
         logger.info(f"SavePlatformCredentials called for platform_id: {request.platform_id}")
@@ -571,20 +510,7 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
 #     - u_id: User UUID from auth.users
 #
 #     Returns credentials in frontend format:
-#     ```json
-#     {
-#         "status_code": 200,
-#         "data": {
-#             "senderEmail": "pratik@inputiv.com",
-#             "smtpServer": "smtp-mail.outlook.com",
-#             "appPassword": "****",
-#             "isActive": true,
-#             "lastUsed": "2026-01-09T10:30:00",
-#             "createdAt": "2026-01-08T15:00:00",
-#             "updatedAt": "2026-01-09T10:30:00"
-#         },
-#         "error": null
-#     }
+#
 #     ```
 #     """
 #     try:
@@ -706,28 +632,9 @@ async def save_platform_credentials(request: SavePlatformCredentialsRequest):
 #     - appPassword: App password for SMTP (will be encrypted)
 #     - smtpServer: SMTP server hostname (e.g., "smtp-mail.outlook.com")
 #
-#     Example Request:
-#     ```
-#     POST /api/SaveSMTPCredentials
-#     ?uuid=550e8400-e29b-41d4-a716-446655440000
-#     &senderEmail=pratik@inputiv.com
-#     &appPassword=abcd-efgh-ijkl-mnop
-#     &smtpServer=smtp-mail.outlook.com
-#     ```
 #
 #     Response:
-#     ```json
-#     {
-#         "status_code": 200,
-#         "data": {
-#             "success": true,
-#             "action": "created",
-#             "senderEmail": "pratik@inputiv.com",
-#             "credentialId": 1
-#         },
-#         "error": null
-#     }
-#     ```
+#
 #     """
 #     try:
 #         logger.info(f"SaveSMTPCredentials called for user: {uuid}")
