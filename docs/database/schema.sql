@@ -11,6 +11,19 @@ CREATE TABLE public.account_selected_charts (
   CONSTRAINT account_selected_charts_account_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id),
   CONSTRAINT account_selected_charts_chart_fkey FOREIGN KEY (chart_id) REFERENCES public.platform_available_charts(id)
 );
+CREATE TABLE public.account_smtp_credentials (
+  id integer NOT NULL DEFAULT nextval('account_smtp_credentials_id_seq'::regclass),
+  account_id integer NOT NULL UNIQUE,
+  smtp_email character varying NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  azure_tenant_id character varying NOT NULL,
+  azure_client_id character varying NOT NULL,
+  azure_client_secret character varying NOT NULL,
+  CONSTRAINT account_smtp_credentials_pkey PRIMARY KEY (id),
+  CONSTRAINT account_smtp_credentials_account_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(id)
+);
 CREATE TABLE public.accounts (
   id integer NOT NULL DEFAULT nextval('accounts_id_seq'::regclass),
   account_name character varying NOT NULL,
@@ -54,7 +67,7 @@ CREATE TABLE public.audit_log (
 CREATE TABLE public.generated_reports (
   id integer NOT NULL DEFAULT nextval('generated_reports_id_seq'::regclass),
   organization_id integer NOT NULL,
-  report_month character varying NOT NULL,
+  report_month character varying NOT NULL CHECK (report_month::text = ANY (ARRAY['January'::character varying, 'February'::character varying, 'March'::character varying, 'April'::character varying, 'May'::character varying, 'June'::character varying, 'July'::character varying, 'August'::character varying, 'September'::character varying, 'October'::character varying, 'November'::character varying, 'December'::character varying]::text[])),
   report_year integer NOT NULL,
   organization_data jsonb,
   execution_info jsonb,
@@ -89,6 +102,7 @@ CREATE TABLE public.integrations (
   is_active boolean DEFAULT true,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  json_object_name text NOT NULL,
   CONSTRAINT integrations_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.license_sku_mappings (
@@ -315,7 +329,7 @@ CREATE TABLE public.organization_pocs (
   id integer NOT NULL DEFAULT nextval('organization_pocs_id_seq'::regclass),
   organization_id integer NOT NULL,
   poc_name character varying NOT NULL,
-  poc_email character varying NOT NULL,
+  poc_email character varying NOT NULL UNIQUE,
   poc_role character varying,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
