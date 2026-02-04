@@ -242,7 +242,7 @@ async function generatePdfWithRetry(htmlFilePath, outputPath, attempt = 1) {
     // Load HTML content into page
     console.log("Loading HTML content...");
     await page.setContent(htmlContent, {
-      waitUntil: "networkidle0",
+      waitUntil: "domcontentloaded",
     });
 
     console.log("HTML content loaded");
