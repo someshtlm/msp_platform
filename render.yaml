@@ -1,51 +1,32 @@
-# Render Blueprint — switches msp_platform-dev to Docker runtime
-#
-# How to apply:
-#   1. Commit this file to dev branch and push
-#   2. Render Dashboard → Blueprints → Create Blueprint → select render.yaml
-#   3. Click Apply — updates your existing service in-place (no new service)
-#   4. Go to Dashboard → msp_platform-dev → Env Vars
-#   5. Set values for all sync: false vars (they are keys only, no values in this file)
-
-services:
-  - type: web
-    name: msp_platform-dev
-    runtime: docker
-    repo: https://github.com/someshtlm/msp_platform
-    branch: dev
-    healthCheckPath: /openapi.json
-
-    envs:
-      # --- Supabase ---
+# Exported from Render on 2026-02-04T06:24:32Z
+version: "1"
+projects:
+- name: My project
+  environments:
+  - name: Production
+    services:
+    - type: web
+      name: msp_platform-dev
+      runtime: docker
+      repo: https://github.com/someshtlm/msp_platform
+      branch: dev
+      plan: free
+      envVars:
+      - key: CONVERTHUB_API_KEY
+        sync: false
       - key: SUPABASE_URL
-        scope: service
         sync: false
       - key: SUPABASE_KEY
-        scope: service
         sync: false
-      # --- Encryption ---
       - key: ENCRYPTION_KEY
-        scope: service
         sync: false
-
-      # --- ConvertHub ---
-      - key: CONVERTHUB_API_KEY
-        scope: service
-        sync: false
-
-
-      # --- Docs Auth ---
       - key: DOCS_USERNAME
-        scope: service
         sync: false
       - key: DOCS_PASSWORD
-        scope: service
-        sync: false
-
-      # --- Misc ---
-      - key: DEFAULT_CREDENTIAL_ID
-        scope: service
         sync: false
       - key: DEMO_USER_ID
-        scope: service
         sync: false
+      - key: DEFAULT_CREDENTIAL_ID
+        sync: false
+      region: virginia
+      autoDeployTrigger: "off"
