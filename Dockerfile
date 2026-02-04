@@ -50,8 +50,8 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Expose the port
+# Expose the port (Render sets PORT env var automatically)
 EXPOSE 8011
 
-# Start the FastAPI server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8011"]
+# Start the FastAPI server — uses Render's PORT if set, falls back to 8011
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8011}"]
