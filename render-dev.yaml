@@ -1,4 +1,4 @@
-# Exported from Render on 2026-02-04T06:24:32Z
+# Render Blueprint for DEV environment
 version: "1"
 projects:
 - name: My project
