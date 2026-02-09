@@ -235,7 +235,23 @@ class SecurityAssessmentOrchestrator:
         # Use the autotask_company_id from org_info for data collection
         autotask_company_id = org_info.get('autotask_company_id')
 
-        return await self.collect_all_data(company_id=autotask_company_id, month_name=month_name)
+        # Collect data from all platforms
+        final_data = await self.collect_all_data(company_id=autotask_company_id, month_name=month_name)
+
+        # Ensure execution_info always has organization_name (even if NinjaOne is not configured)
+        if "execution_info" not in final_data:
+            final_data["execution_info"] = {
+                "organization_id": str(self.org_id),
+                "organization_name": org_info['organization_name'],
+                "timestamp": datetime.now().isoformat(),
+                "data_sources": []
+            }
+        else:
+            # Override with correct org info from database
+            final_data["execution_info"]["organization_id"] = str(self.org_id)
+            final_data["execution_info"]["organization_name"] = org_info['organization_name']
+
+        return final_data
 
     async def collect_all_data_for_org(self, ninjaone_org_id: str, month_name: str = None) -> Dict[str, Any]:
         """
