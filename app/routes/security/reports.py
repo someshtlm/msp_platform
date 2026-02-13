@@ -4,7 +4,7 @@ import logging
 import os
 import io
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Path, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional, Dict, Any
@@ -388,6 +388,208 @@ async def generate_security_report_json_endpoint(
             data=None,
             error=f"Internal server error: {str(e)}"
         )
+
+
+@router.get("/GenerateSecurityReportJSONStream/{user_id}/{org_id}",
+            summary="Generate Security Report JSON (Streaming)",
+            description="Streams report data platform-by-platform as NDJSON to avoid 504 timeouts.")
+async def generate_security_report_json_stream(
+        user_id: str = Path(..., description="User UUID (auth_user_id) from frontend"),
+        org_id: int = Path(..., description="Organization ID"),
+        month: Optional[str] = Query(None,
+                                     description="Report month in 'month_year' format (e.g., 'november_2024')")
+):
+    """
+    Streaming version of GenerateSecurityReportJSON.
+    Returns NDJSON (newline-delimited JSON) with each platform's data sent as it completes.
+    Sends heartbeats every 10 seconds to keep the connection alive and prevent 504 timeouts.
+
+    Each line is a JSON object with a 'type' field:
+    - type: "organization"    → organization info (sent first)
+    - type: "platform_data"   → a single platform's transformed data
+    - type: "heartbeat"       → keep-alive signal (ignore for data)
+    - type: "error"           → error for a specific platform
+    - type: "complete"        → final signal with execution_info
+    """
+    import json
+
+    async def stream_generator():
+        try:
+            # --- Step 1: Validate user_id → get account_id ---
+            try:
+                from app.core.database.supabase_services import supabase
+
+                result = supabase.rpc('get_account_id_from_uid', {'user_uid': user_id}).execute()
+
+                if not result.data:
+                    yield json.dumps({"type": "error", "message": f"User not found: {user_id}", "progress": 0}) + "\n"
+                    return
+
+                account_id = result.data
+                logger.info(f"[Stream] Resolved user_id {user_id} to account_id: {account_id}")
+
+            except Exception as e:
+                yield json.dumps({"type": "error", "message": f"Failed to resolve user: {str(e)}", "progress": 0}) + "\n"
+                return
+
+            # --- Step 2: Validate org_id belongs to account ---
+            try:
+                org_response = supabase.table('organizations')\
+                    .select('id, account_id, organization_name, status')\
+                    .eq('id', org_id)\
+                    .eq('account_id', account_id)\
+                    .eq('status', 'Active')\
+                    .limit(1)\
+                    .execute()
+
+                if not org_response.data or len(org_response.data) == 0:
+                    yield json.dumps({"type": "error", "message": f"Organization {org_id} not found or access denied", "progress": 0}) + "\n"
+                    return
+
+                org_name = org_response.data[0].get('organization_name')
+
+            except Exception as e:
+                yield json.dumps({"type": "error", "message": f"Failed to validate organization: {str(e)}", "progress": 0}) + "\n"
+                return
+
+            # --- Step 3: Validate month format ---
+            if month:
+                try:
+                    from app.utils.month_selector import MonthSelector
+                    month_selector = MonthSelector()
+                    month_info = month_selector.get_month_by_name(month)
+                except ValueError as e:
+                    yield json.dumps({"type": "error", "message": str(e), "progress": 0}) + "\n"
+                    return
+                except Exception as e:
+                    yield json.dumps({"type": "error", "message": f"Invalid month: {str(e)}", "progress": 0}) + "\n"
+                    return
+
+            # --- Step 4: Initialize orchestrator ---
+            try:
+                orchestrator = SecurityAssessmentOrchestrator(account_id=account_id, org_id=org_id)
+                org_info = orchestrator._initialize_processors_with_org_id()
+            except Exception as e:
+                yield json.dumps({"type": "error", "message": f"Failed to initialize: {str(e)}", "progress": 0}) + "\n"
+                return
+
+            # --- Step 5: Send organization info immediately ---
+            reporting_period = None
+            if month:
+                try:
+                    parts = month.split('_')
+                    month_name_str = parts[0].capitalize()
+                    year_str = parts[1]
+                    reporting_period = f"{month_name_str} {year_str}"
+                except:
+                    pass
+
+            transformer = FrontendTransformer()
+            execution_info_data = {
+                "execution_info": {
+                    "organization_id": str(org_id),
+                    "organization_name": org_info['organization_name'],
+                    "timestamp": datetime.now().isoformat(),
+                    "data_sources": []
+                }
+            }
+
+            org_data = transformer._extract_organization_info(execution_info_data, reporting_period, account_id)
+
+            yield json.dumps({
+                "type": "organization",
+                "data": {"organization": org_data},
+                "progress": 5
+            }, default=str) + "\n"
+
+            logger.info(f"[Stream] Sent organization info for {org_name}")
+
+            # --- Step 6: Stream each platform's data ---
+            autotask_company_id = org_info.get('autotask_company_id')
+            start_time = datetime.now()
+            data_sources = []
+
+            async for chunk in orchestrator.stream_data_per_platform(
+                company_id=autotask_company_id,
+                month_name=month
+            ):
+                if chunk["type"] == "platform_data":
+                    # Transform the raw platform data to frontend format
+                    platform_name = chunk["platform"]
+                    raw_data = chunk["data"]
+
+                    try:
+                        transformed = transformer.transform_single_platform(
+                            platform_name, raw_data, account_id
+                        )
+
+                        if transformed:
+                            yield json.dumps({
+                                "type": "platform_data",
+                                "platform": platform_name,
+                                "data": transformed,
+                                "progress": chunk["progress"]
+                            }, default=str) + "\n"
+                            logger.info(f"[Stream] Sent {platform_name} data")
+                        else:
+                            yield json.dumps({
+                                "type": "error",
+                                "platform": platform_name,
+                                "message": f"{platform_name}: transformation returned empty data",
+                                "progress": chunk["progress"]
+                            }, default=str) + "\n"
+                            logger.warning(f"[Stream] {platform_name} transform returned empty")
+
+                    except Exception as e:
+                        yield json.dumps({
+                            "type": "error",
+                            "platform": platform_name,
+                            "message": f"{platform_name} transform failed: {str(e)}",
+                            "progress": chunk["progress"]
+                        }, default=str) + "\n"
+                        logger.error(f"[Stream] {platform_name} transform error: {e}")
+
+                elif chunk["type"] == "heartbeat":
+                    yield json.dumps(chunk, default=str) + "\n"
+
+                elif chunk["type"] == "error":
+                    yield json.dumps(chunk, default=str) + "\n"
+
+                elif chunk["type"] == "stream_done":
+                    data_sources = chunk.get("data_sources", [])
+
+            # --- Step 7: Send complete signal with execution_info ---
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+
+            yield json.dumps({
+                "type": "complete",
+                "data": {
+                    "execution_info": {
+                        "generated_at": start_time.isoformat(),
+                        "data_sources_processed": data_sources,
+                        "report_type": "Monthly Customer Report",
+                        "processing_time_seconds": round(duration, 2),
+                        "next_update": (datetime.now() + timedelta(days=30)).isoformat()
+                    }
+                },
+                "progress": 100
+            }, default=str) + "\n"
+
+            logger.info(f"[Stream] Report complete in {duration:.1f}s, platforms: {data_sources}")
+
+        except Exception as e:
+            logger.error(f"[Stream] Unexpected error: {e}")
+            yield json.dumps({"type": "error", "message": f"Unexpected error: {str(e)}", "progress": 0}) + "\n"
+
+    return StreamingResponse(
+        stream_generator(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"  # Disable Nginx/proxy buffering
+        }
+    )
 
 
 def filter_platform_data(frontend_json: Dict[str, Any], platform_name: str) -> Dict[str, Any]:
