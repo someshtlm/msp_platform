@@ -238,13 +238,7 @@ class FrontendTransformer:
                     bd_charts = bitdefender_metrics.get("charts", {})
                     bd_tables = bitdefender_metrics.get("tables", {})
 
-                    # Chart 1: Endpoint Utilization (combined: activeEndpoints, managedEndpoints)
-                    if is_chart_selected('bitdefender', 'endpoint_utilization_bitdefender') and "endpoint_utilization_bitdefender" in bd_charts:
-                        if "Bitdefender" not in frontend_json:
-                            frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
-                        frontend_json["Bitdefender"]["charts"]["endpoint_utilization_bitdefender"] = bd_charts["endpoint_utilization_bitdefender"]
-
-                    # Chart 2: Risk Score
+                    # Chart 1: Risk Score
                     if is_chart_selected('bitdefender', 'riskScore_bitdefender') and "riskScore_bitdefender" in bd_charts:
                         if "Bitdefender" not in frontend_json:
                             frontend_json["Bitdefender"] = {"charts": {}, "tables": {}}
@@ -353,10 +347,6 @@ class FrontendTransformer:
                 }
                 frontend_json["Bitdefender"] = {
                     "charts": {
-                        "endpoint_utilization_bitdefender": {
-                            "activeEndpoints": 0,
-                            "managedEndpoints": 0
-                        },
                         "riskScore_bitdefender": {
                             "value": "0",
                             "impact": "0",
@@ -373,6 +363,7 @@ class FrontendTransformer:
                                 "linux": 0
                             },
                             "count": {
+                                "managedEndpoints": 0,
                                 "physicalMachines": 0,
                                 "virtualMachines": 0
                             }
@@ -1465,4 +1456,4 @@ class FrontendTransformer:
                 "data_sources_processed": [],
                 "report_type": "Error Report"
             }
-        }
+        }   
