@@ -125,16 +125,17 @@ class BitdefenderProcessor:
         network_inventory = raw_data.get("network_inventory", [])
         monthly_usage = raw_data.get("monthly_usage", {})
 
-        # Combine endpoint utilization metrics into single chart
-        processed["bitdefender_metrics"]["charts"]["endpoint_utilization_bitdefender"] = {
-            "activeEndpoints": self._process_active_endpoints(monthly_usage),
-            "managedEndpoints": self._process_managed_endpoints(endpoints_list)
-        }
-
         processed["bitdefender_metrics"]["charts"]["riskScore_bitdefender"] = self._process_risk_score(company_details)
-        processed["bitdefender_metrics"]["charts"]["inventory_summary_bitdefender"] = self._process_os_summary(network_inventory)
 
-        processed["bitdefender_metrics"]["tables"]["networkinventory_bitdefender"] = self._process_network_inventory(network_inventory)
+        # Add managedEndpoints into inventory_summary count
+        inventory_summary = self._process_os_summary(endpoints_list)
+        managed_count = self._process_managed_endpoints(endpoints_list)
+        inventory_summary["count"]["managedEndpoints"] = managed_count
+        processed["bitdefender_metrics"]["charts"]["inventory_summary_bitdefender"] = inventory_summary
+
+        processed["bitdefender_metrics"]["tables"]["networkinventory_bitdefender"] = self._process_network_inventory(
+            network_inventory, endpoints_list
+        )
 
         logger.info("Bitdefender data processed successfully")
         return processed
@@ -193,22 +194,17 @@ class BitdefenderProcessor:
             "industryModifier": str(risk_score.get("industryModifier", 0) or 0)
         }
 
-    def _process_2fa_status(self, company_details: Dict[str, Any]) -> bool:
-        """Extract 2FA enforcement status"""
-        return company_details.get("enforce2FA", False)
-
     def _process_managed_endpoints(self, endpoints_list: List[Dict[str, Any]]) -> int:
-        """Count managed endpoints (those with valid 'id' field)"""
-        count = sum(1 for endpoint in endpoints_list if endpoint.get("id"))
+        """Count managed endpoints (those with isManaged=True)"""
+        count = sum(1 for endpoint in endpoints_list if endpoint.get("isManaged") is True)
         return count
 
-    def _process_active_endpoints(self, monthly_usage: Dict[str, Any]) -> int:
-        """Extract active endpoints from monthly usage"""
-        return monthly_usage.get("endpointMonthlyUsage", 0)
-
-    def _process_os_summary(self, network_inventory: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _process_os_summary(self, endpoints_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Process OS distribution and machine types
+        Process OS distribution and machine types from endpoints_list.
+
+        Args:
+            endpoints_list: List of managed endpoints from getEndpointsList
 
         Returns:
             Dict with nested structure:
@@ -229,197 +225,54 @@ class BitdefenderProcessor:
             "virtualMachines": 0
         }
 
-        for item in network_inventory:
-            details = item.get("details") or {}
-            os_version = (details.get("operatingSystemVersion") or "").lower()
-            machine_type = details.get("machineType")
+        for endpoint in endpoints_list:
+            if endpoint.get("isManaged") is not True:
+                continue
+
+            machine_type = endpoint.get("machineType")
+            if machine_type == 1:
+                machine_count["physicalMachines"] += 1
+            elif machine_type in (2, 3):
+                machine_count["virtualMachines"] += 1
+
+            os_version = (endpoint.get("operatingSystemVersion") or "").lower()
 
             if "windows" in os_version:
-                if "server" in os_version:
+                if any(kw in os_version for kw in ["server", "multi-session", "datacenter"]):
                     os_summary["windowsServers"] += 1
                 else:
                     os_summary["windowsWorkstations"] += 1
-            elif "mac" in os_version or "macos" in os_version or "os x" in os_version:
+            elif any(kw in os_version for kw in ["mac", "macos", "os x", "darwin"]):
                 os_summary["macOS"] += 1
-            elif "linux" in os_version:
+            elif any(kw in os_version for kw in [
+                "linux", "ubuntu", "centos", "redhat", "red hat",
+                "debian", "suse", "fedora", "rhel", "oracle linux", "alma", "rocky"
+            ]):
                 os_summary["linux"] += 1
 
-            if machine_type == 1:
-                machine_count["physicalMachines"] += 1
-            elif machine_type == 2:
-                machine_count["virtualMachines"] += 1
+        logger.info(f"Inventory: Physical={machine_count['physicalMachines']}, Virtual={machine_count['virtualMachines']}")
+        logger.info(f"OS: WinWS={os_summary['windowsWorkstations']}, WinSrv={os_summary['windowsServers']}, "
+                   f"Mac={os_summary['macOS']}, Linux={os_summary['linux']}")
 
         return {
             "summary": os_summary,
             "count": machine_count
         }
 
-    def _process_network_inventory(self, network_inventory: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _process_network_inventory(self, network_inventory: List[Dict[str, Any]],
+                                    endpoints_list: List[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
-        Process network inventory to extract module deployment status
+        Process network inventory to extract module deployment status.
+        Simplified: counts modules as enabled or not-enabled per managed endpoint.
+
+        Args:
+            network_inventory: Network inventory items from API
+            endpoints_list: Endpoints list (used to get managed endpoint IDs)
 
         Returns:
-            List of module objects with enable/disable/notInstalled counts
+            List of module objects with enable/notenable counts
         """
-        module_keys = {
-            "antimalware": "antimalware",
-            "advancedThreatControl": "advancedThreatControl",
-            "advancedAntiExploit": "advancedAntiExploit",
-            "firewall": "firewall",
-            "networkAttackDefense": "networkAttackDefense",
-            "deviceControl": "deviceControl",
-            "encryption": "encryption",
-            "patchManagement": "patchManagement",
-            "edrSensor": "edrSensor",
-            "powerUser": "powerUser",
-            "exchange": "exchange",
-            "containerProtection": "containerProtection",
-            "integrityMonitoring": "integrityMonitoring",
-            "phASR": "phASR"
-        }
-
-        summary = {m: {"enabled": 0, "disabled": 0, "notInstalled": 0} for m in module_keys}
-
-        supported_by_platform = {
-            "windows": set(module_keys.keys()),
-            "linux": {
-                "antimalware", "advancedThreatControl", "advancedAntiExploit",
-                "networkAttackDefense", "deviceControl", "powerUser"
-            },
-            "macos": {
-                "antimalware", "advancedThreatControl", "advancedAntiExploit",
-                "networkAttackDefense", "powerUser"
-            }
-        }
-
-        company_license_flags = {}
-        for item in network_inventory:
-            if item.get("type") == 1:
-                lic = (item.get("details") or {}).get("licenseInfo") or {}
-                if lic:
-                    company_license_flags.update(lic)
-
-        license_map = {
-            "encryption": ["manageEncryption"],
-            "patchManagement": ["managePatchManagement", "managePatchManagementResell"],
-            "edrSensor": ["manageHyperDetect", "manageXDRNetwork", "manageEDR"],
-            "containerProtection": ["manageContainerProtection"],
-            "integrityMonitoring": ["manageIntegrityMonitoring"],
-            "phASR": ["managePHASR"],
-            "exchange": ["manageEmailSecurity", "manageExchange"],
-            "antimalware": [],
-            "advancedThreatControl": [],
-            "advancedAntiExploit": [],
-            "firewall": [],
-            "networkAttackDefense": [],
-            "deviceControl": [],
-            "powerUser": []
-        }
-
-        licensed_by_company = {}
-        for m in module_keys:
-            licensed_by_company[m] = False
-            for key in license_map.get(m, []):
-                if key in company_license_flags and bool(company_license_flags[key]) is True:
-                    licensed_by_company[m] = True
-                    break
-
-        endpoints = [item for item in network_inventory if item.get("type") in (5, 6, 7)]
-        total_endpoints = len(endpoints)
-
-        licensed = {m: licensed_by_company.get(m, False) for m in module_keys}
-
-        for item in endpoints:
-            modules = (item.get("details") or {}).get("modules") or {}
-            for m, bd_key in module_keys.items():
-                if not licensed[m]:
-                    if modules.get(bd_key) is True:
-                        licensed[m] = True
-
-        for item in endpoints:
-            details = item.get("details") or {}
-            modules = details.get("modules") or {}
-            platform = self._normalize_platform(item)
-
-            for m, bd_key in module_keys.items():
-                if not licensed.get(m, False):
-                    continue
-
-                if platform not in supported_by_platform or m not in supported_by_platform[platform]:
-                    summary[m]["notInstalled"] += 1
-                    continue
-
-                if bd_key not in modules:
-                    summary[m]["notInstalled"] += 1
-                    continue
-
-                value = modules.get(bd_key)
-
-                if isinstance(value, bool):
-                    if value:
-                        summary[m]["enabled"] += 1
-                    else:
-                        summary[m]["disabled"] += 1
-                    continue
-
-                if isinstance(value, dict):
-                    inst = value.get("installed")
-                    state = (value.get("state") or value.get("status") or "").lower()
-                    if inst is True or "enable" in state:
-                        summary[m]["enabled"] += 1
-                    elif inst is False or ("not" in state and "install" in state):
-                        summary[m]["notInstalled"] += 1
-                    elif "disable" in state:
-                        summary[m]["disabled"] += 1
-                    else:
-                        summary[m]["disabled"] += 1
-                    continue
-
-                if isinstance(value, str):
-                    s = value.lower()
-                    if "not" in s and "install" in s:
-                        summary[m]["notInstalled"] += 1
-                    elif "disable" in s:
-                        summary[m]["disabled"] += 1
-                    elif "enable" in s or "true" in s:
-                        summary[m]["enabled"] += 1
-                    else:
-                        summary[m]["disabled"] += 1
-                    continue
-
-                summary[m]["disabled"] += 1
-
-        for m in module_keys:
-            if not licensed.get(m, False):
-                summary[m] = {"enabled": 0, "disabled": 0, "notInstalled": total_endpoints}
-
-        for m in module_keys:
-            s = summary[m]
-            sum_counts = s["enabled"] + s["disabled"] + s["notInstalled"]
-            if sum_counts != total_endpoints:
-                s["notInstalled"] += (total_endpoints - sum_counts)
-
-        allowed_modules = {
-            "antimalware",
-            "advancedThreatControl",
-            "advancedAntiExploit",
-            "firewall",
-            "networkAttackDefense",
-            "deviceControl",
-            "encryption",
-            "patchManagement",
-            "edrSensor",
-            "powerUser",
-            "exchange",
-            "containerProtection",
-            "integrityMonitoring",
-            "phASR"
-        }
-
-        filtered_summary = {m: summary[m] for m in allowed_modules}
-
-        # Display name mapping for modules
-        display_name_map = {
+        module_mapping = {
             "antimalware": "Antimalware",
             "advancedThreatControl": "Advanced Threat Control",
             "advancedAntiExploit": "Advanced Anti-Exploit",
@@ -436,49 +289,37 @@ class BitdefenderProcessor:
             "phASR": "PHASR"
         }
 
+        # Count enabled modules per managed endpoint
+        module_stats = {module: 0 for module in module_mapping.keys()}
+
+        # Get managed endpoint IDs from endpoints_list
+        managed_endpoint_ids = {ep.get("id") for ep in endpoints_list} if endpoints_list else set()
+        managed_count = len(managed_endpoint_ids)
+
+        for item in network_inventory:
+            # Only process endpoint types (5=computer, 6=virtualMachine, 7=ec2Instance)
+            if item.get("type") not in (5, 6, 7):
+                continue
+            # Only count managed endpoints
+            if item.get("id") not in managed_endpoint_ids:
+                continue
+
+            modules = (item.get("details") or {}).get("modules") or {}
+            for module_key in module_mapping.keys():
+                if modules.get(module_key) is True:
+                    module_stats[module_key] += 1
+
+        logger.info(f"Security Modules: {len(module_mapping)} modules processed across {managed_count} managed endpoints")
+
+        # Build output with enable/notenable
         network_inventory_list = [
             {
-                "Module": module_name,
-                "enable": module_data["enabled"],
-                "disable": module_data["disabled"],
-                "notInstalled": module_data["notInstalled"],
-                "displayName": display_name_map.get(module_name, module_name)
+                "Module": module_key,
+                "enable": module_stats[module_key],
+                "notenable": managed_count - module_stats[module_key],
+                "displayName": module_mapping[module_key]
             }
-            for module_name, module_data in filtered_summary.items()
+            for module_key in module_mapping.keys()
         ]
 
         return network_inventory_list
-
-    def _normalize_platform(self, item: Dict[str, Any]) -> str:
-        """
-        Normalize platform/OS detection
-
-        Returns:
-            "windows", "macos", "linux", or "unknown"
-        """
-        details = item.get("details") or {}
-        fields = [
-            details.get("osType"),
-            details.get("platform"),
-            details.get("operatingSystem"),
-            details.get("operatingSystemVersion"),
-            item.get("os"),
-            item.get("platform")
-        ]
-
-        joined = " ".join([str(f) for f in fields if f]).lower()
-
-        if "win" in joined or "windows" in joined:
-            return "windows"
-
-        mac_keys = ["mac", "darwin", "sequoia", "monterey", "ventura", "sonoma", "big sur"]
-        if any(k in joined for k in mac_keys):
-            return "macos"
-
-        if "linux" in joined:
-            return "linux"
-
-        if "10." in joined or "6." in joined:
-            return "windows"
-
-        return "unknown"
