@@ -1020,10 +1020,6 @@
                     },
                     "Bitdefender": {
                     "charts": {
-                        "endpoint_utilization_bitdefender": {
-                            "activeEndpoints": 36,
-                            "managedEndpoints": 38
-                        },
                         "riskScore_bitdefender" : {
                                 "value": "50%",
                                 "impact": "Medium",
@@ -1039,6 +1035,7 @@
                                 "linux": 1
                             },
                             "count": {
+                                "managedEndpoints": 98,
                                 "physicalMachines": 28,
                                 "virtualMachines": 10
                             }
@@ -1049,99 +1046,85 @@
                     {
                         "Module": "antimalware",
                         "enable": 80,
-                        "disable": 0,
-                        "notInstalled": 2,
+                        "notenable": 0,
                         "displayName": "Antimalware"
                     },
                     {
                         "Module": "advancedThreatControl",
-                        "enable": 81,
-                        "disable": 1,
-                        "notInstalled": 0,
+                        "enable": 80,
+                        "notenable": 0,
                         "displayName": "Advanced Threat Control"
                     },
                     {
                         "Module": "advancedAntiExploit",
                         "enable": 82,
-                        "disable": 0,
-                        "notInstalled": 0,
+                        "notenable": 0,
                         "displayName": "Advanced Anti-Exploit"
                     },
                     {
                         "Module": "firewall",
                         "enable": 78,
-                        "disable": 1,
-                        "notInstalled": 3,
+                        "notenable": 4,
                         "displayName": "Firewall"
                     },
                     {
                         "Module": "networkAttackDefense",
                         "enable": 75,
-                        "disable": 2,
-                        "notInstalled": 5,
+                        "notenable": 7,
                         "displayName": "Network Protection"
                     },
                     {
                         "Module": "deviceControl",
                         "enable": 82,
-                        "disable": 0,
-                        "notInstalled": 0,
+                        "notenable": 0,
                         "displayName": "Device Control"
                     },
                     {
                         "Module": "encryption",
                         "enable": 2,
-                        "disable": 0,
-                        "notInstalled": 80,
+                        "notenable": 70,
                         "displayName": "Encryption"
                     },
                     {
                         "Module": "patchManagement",
                         "enable": 70,
-                        "disable": 5,
-                        "notInstalled": 7,
+                        "notenable": 0,
                         "displayName": "Patch Management"
                     },
                     {
                         "Module": "edrSensor",
                         "enable": 65,
-                        "disable": 0,
-                        "notInstalled": 17,
+                        "notenable": 17,
                         "displayName": "EDR Sensor"
                     },
                     {
                         "Module": "powerUser",
                         "enable": 12,
-                        "disable": 0,
-                        "notInstalled": 70,
+                        "notenable": 0,
                         "displayName": "Power User"
                     },
                     {
                         "Module": "exchange",
                         "enable": 0,
-                        "disable": 0,
-                        "notInstalled": 82,
+                        "notenable": 82,
                         "displayName": "Exchange Protection"
                     },
                     {
                         "Module": "containerProtection",
                         "enable": 0,
-                        "disable": 0,
-                        "notInstalled": 82,
+                         "notenable": 70,
                         "displayName": "Container Protection"
                     },
                     {
                         "Module": "integrityMonitoring",
                         "enable": 10,
-                        "disable": 3,
-                        "notInstalled": 70,
+                         "notenable": 3,
                         "displayName": "Integrity Monitoring"
                     },
                     {
                         "Module": "phASR",
                         "enable": 5,
-                        "disable": 0,
-                        "notInstalled": 77,
+                        "notenable": 0,
                         "displayName": "PHASR"
                     }
                 ]
