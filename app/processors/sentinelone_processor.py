@@ -111,11 +111,14 @@ class SentinelOneProcessor:
         # Process ALL agents in one loop
         for agent in agents:
             # Domain counts
-            domain = agent.get("domain", "").strip().upper()
+            domain = agent.get("domain", "").strip().lower()
             if domain:
+                # Sanitize domain keys: replace dots with _dot_
+                if "." in domain:
+                    domain = domain.replace(".", "_dot_")
                 domain_counts[domain] = domain_counts.get(domain, 0) + 1
             else:
-                domain_counts["OTHERS"] = domain_counts.get("OTHERS", 0) + 1
+                domain_counts["others"] = domain_counts.get("others", 0) + 1
 
             # Machine type counts
             machine_type = agent.get("machineType", "").lower().strip()
@@ -181,7 +184,7 @@ class SentinelOneProcessor:
 
         # Build the 11 charts
         # Hardcoded domain keys + dynamic overflow
-        hardcoded_domains = ["WORKGROUP", "DRF", "PG", "API", "HISCROSS", "DYNAMESH", "RCW", "CORPORATE", "FIDELITY", "KATZ", "OTHERS"]
+        hardcoded_domains = ["workgroup", "drf", "pg", "api", "hiscross", "dynamesh", "rcw", "corporate", "fidelity", "katz", "others"]
         secured_devices_by_domain = {d: domain_counts.get(d, 0) for d in hardcoded_domains}
         # Add any dynamic domains not in the hardcoded list
         for domain, count in domain_counts.items():
