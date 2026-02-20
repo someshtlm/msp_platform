@@ -1,4 +1,4 @@
-# Render Blueprint for STAGE environment
+# Render Blueprint for PRODUCTION (master) environment
 version: "1"
 projects:
 - name: My project
@@ -6,10 +6,10 @@ projects:
   - name: Production
     services:
     - type: web
-      name: msp_platform-stage
+      name: msp_platform
       runtime: docker
       repo: https://github.com/someshtlm/msp_platform
-      branch: stage
+      branch: master
       plan: free
       envVars:
       - key: CONVERTHUB_API_KEY
