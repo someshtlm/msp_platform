@@ -69,7 +69,10 @@ class FrontendTransformer:
             selected_charts = None
             if account_id:
                 try:
-                    from app.core.config.supabase import SupabaseCredentialManager
+                    try:
+                        from security_reporting_system.config.supabase_client import SupabaseCredentialManager
+                    except ImportError:
+                        from config.supabase_client import SupabaseCredentialManager
                     supabase_manager = SupabaseCredentialManager()
                     charts_response = supabase_manager.supabase.rpc('get_account_charts', {
                         'p_account_id': account_id
@@ -302,26 +305,6 @@ class FrontendTransformer:
                                 cleaned_retention[policy] = count or 0
                         frontend_json["Cove"]["charts"]["retention_policy_distribution_cove"] = cleaned_retention or {}
 
-                # SentinelOne charts (11 charts, no tables)
-                sentinelone_metrics = full_data.get("sentinelone_metrics", {})
-                if sentinelone_metrics:
-                    s1_charts = sentinelone_metrics.get("charts", {})
-
-                    s1_chart_keys = [
-                        "secured_devices_by_domain", "secured_devices_by_role",
-                        "secured_devices_by_os", "infected_endpoints",
-                        "agent_version_coverage", "endpoint_connection_status",
-                        "severity_levels_threats", "incident_status",
-                        "analyst_verdicts_threats", "threats_by_detection_engine",
-                        "threats_by_type"
-                    ]
-
-                    for chart_key in s1_chart_keys:
-                        if is_chart_selected('sentinelone', chart_key) and chart_key in s1_charts:
-                            if "SentinelOne" not in frontend_json:
-                                frontend_json["SentinelOne"] = {"charts": {}}
-                            frontend_json["SentinelOne"]["charts"][chart_key] = s1_charts[chart_key]
-
             except Exception as e:
                 logger.warning(f"Failed to extract chart/table data: {e}")
                 # Fallback structure
@@ -412,21 +395,6 @@ class FrontendTransformer:
                         "retention_policy_distribution_cove": {}
                     }
                 }
-                frontend_json["SentinelOne"] = {
-                    "charts": {
-                        "secured_devices_by_domain": {},
-                        "secured_devices_by_role": {"desktop": 0, "laptop": 0, "server": 0, "other": 0, "kubernetes_node": 0, "storage": 0, "kubernetes_pod": 0, "ecs_task": 0, "kubernetes_helper": 0},
-                        "secured_devices_by_os": {"windows": 0, "macos": 0, "linux": 0, "windows_legacy": 0},
-                        "infected_endpoints": {"healthy": 0, "infected": 0},
-                        "agent_version_coverage": {},
-                        "endpoint_connection_status": {"connected": 0, "disconnected": 0, "connecting": 0, "disconnecting": 0},
-                        "severity_levels_threats": {"suspicious": 0, "malicious": 0, "n/a": 0},
-                        "incident_status": {"resolved": 0, "unresolved": 0, "in_progress": 0},
-                        "analyst_verdicts_threats": {"false_positive": 0, "true_positive": 0, "suspicious": 0, "undefined": 0},
-                        "threats_by_detection_engine": {"sentinelone_cloud": 0, "on-write_static_ai": 0, "on_write_static_ai_suspicious": 0, "behavioral_ai": 0, "documents,_scripts": 0, "user-defined_blocklist": 0, "reputation": 0, "cloud_detection": 0, "anti_exploitation_fileless": 0, "intrusion_detection": 0},
-                        "threats_by_type": {"Malware": 0, "Ransomware": 0, "General": 0, "Trojan": 0}
-                    }
-                }
 
 
 
@@ -445,230 +413,6 @@ class FrontendTransformer:
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return self._create_error_response(str(e))
 
-    def transform_single_platform(self, platform_name: str, platform_raw_data: Dict[str, Any],
-                                  account_id: int = None) -> Dict[str, Any]:
-        """
-        Transform a single platform's raw processed data into frontend-optimized JSON.
-        Used by the streaming endpoint to transform each platform independently.
-
-        Args:
-            platform_name: Platform key from orchestrator (e.g., "NinjaOne", "Autotask")
-            platform_raw_data: The processed data dict from the orchestrator for this platform
-            account_id: Account ID for filtering selected charts (optional)
-
-        Returns:
-            Dict with the platform's frontend JSON, e.g. {"NinjaOne": {"charts": {...}, "tables": {...}}}
-        """
-        try:
-            # Load selected charts filter if account_id provided
-            selected_charts = None
-            if account_id:
-                try:
-                    from app.core.config.supabase import SupabaseCredentialManager
-                    supabase_manager = SupabaseCredentialManager()
-                    charts_response = supabase_manager.supabase.rpc('get_account_charts', {
-                        'p_account_id': account_id
-                    }).execute()
-
-                    if charts_response.data:
-                        selected_charts = {}
-                        for chart in charts_response.data:
-                            integration_key = chart.get('integration_key')
-                            chart_key = chart.get('chart_key')
-                            if integration_key not in selected_charts:
-                                selected_charts[integration_key] = []
-                            selected_charts[integration_key].append({'chart_key': chart_key})
-                except Exception as e:
-                    logger.error(f"Failed to load selected charts: {e}")
-
-            def is_chart_selected(platform_key, chart_key):
-                if not selected_charts:
-                    return True
-                if platform_key not in selected_charts:
-                    return False
-                return any(c['chart_key'] == chart_key for c in selected_charts[platform_key])
-
-            frontend_json = {}
-
-            # Build a temporary full_data dict so existing _extract methods work
-            full_data = {}
-            full_data.update(platform_raw_data)
-
-            try:
-                charts_data = self._extract_chart_data(full_data)
-            except Exception as e:
-                logger.error(f"Failed to extract chart data for {platform_name}: {e}")
-                charts_data = {}
-
-            try:
-                table_data = self._extract_table_data(full_data)
-            except Exception as e:
-                logger.error(f"Failed to extract table data for {platform_name}: {e}")
-                table_data = {}
-
-            # --- NinjaOne ---
-            if platform_name == "NinjaOne":
-                ninja = {"charts": {}, "tables": {}}
-
-                if is_chart_selected('ninjaone', 'patch_management_enablement') and "patch_management_enablement" in charts_data:
-                    ninja["charts"]["patch_management_enablement"] = charts_data["patch_management_enablement"]
-                if is_chart_selected('ninjaone', 'patch_status_distribution') and "patch_status_distribution" in charts_data:
-                    ninja["charts"]["patch_status_distribution"] = charts_data["patch_status_distribution"]
-                if is_chart_selected('ninjaone', 'patch_management'):
-                    ninja["charts"]["patch_management"] = table_data.get("patch_management", {
-                        "os_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []},
-                        "third_party_patches": {"summary": {"total": 0, "successful": 0, "failed": 0, "success_rate": 0.0}, "failed_devices": []}
-                    })
-                if is_chart_selected('ninjaone', 'devices_with_failed_patches'):
-                    ninja["charts"]["devices_with_failed_patches"] = table_data.get("devices_with_failed_patches", {
-                        "count": 0, "devices": [], "message": "No devices with failed patches"
-                    })
-                if is_chart_selected('ninjaone', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
-                    ninja["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
-                if is_chart_selected('ninjaone', 'device_inventory'):
-                    ninja["tables"]["device_inventory"] = table_data.get("device_inventory", [])
-                if is_chart_selected('ninjaone', 'device_inventory_server'):
-                    ninja["tables"]["device_inventory_server"] = table_data.get("device_inventory_server", [])
-
-                frontend_json["NinjaOne"] = ninja
-
-            # --- Autotask ---
-            elif platform_name == "Autotask" and "autotask_metrics" in full_data:
-                at = {"charts": {}}
-
-                tickets_by_contact_data = table_data.get("tickets_by_contact", [])
-                contacts_summary = None
-                contacts_list = []
-                for item in tickets_by_contact_data:
-                    if isinstance(item, dict) and "contacts_summary" in item:
-                        contacts_summary = item["contacts_summary"]
-                    else:
-                        contacts_list.append(item)
-
-                if is_chart_selected('autotask', 'daily_tickets_trend') and "daily_tickets_trend" in charts_data:
-                    at["charts"]["daily_tickets_trend"] = charts_data["daily_tickets_trend"]
-                if is_chart_selected('autotask', 'monthly_tickets_by_type') and "monthly_tickets_by_type" in charts_data:
-                    at["charts"]["monthly_tickets_by_type"] = charts_data["monthly_tickets_by_type"]
-                if is_chart_selected('autotask', 'open_tickets_by_issue_type') and "open_tickets_by_issue_type" in charts_data:
-                    at["charts"]["open_tickets_by_issue_type"] = charts_data["open_tickets_by_issue_type"]
-                if is_chart_selected('autotask', 'open_ticket_priority_distribution') and "open_ticket_priority_distribution" in charts_data:
-                    at["charts"]["open_ticket_priority_distribution"] = charts_data["open_ticket_priority_distribution"]
-                if is_chart_selected('autotask', 'sla_performance') and "sla_performance" in charts_data:
-                    at["charts"]["sla_performance"] = charts_data["sla_performance"]
-                if is_chart_selected('autotask', 'tickets_by_contact'):
-                    at["charts"]["tickets_by_contact"] = {
-                        "tickets_by_contact_summary": {
-                            "contacts_summary": contacts_summary if contacts_summary else {
-                                "contacts_count": 0, "total_tickets": 0, "top_contact": "Unknown"
-                            }
-                        },
-                        "data": contacts_list
-                    }
-
-                frontend_json["Autotask"] = at
-
-            # --- ConnectSecure ---
-            elif platform_name == "ConnectSecure" and "connectsecure_metrics" in full_data:
-                cs = {"charts": {}}
-
-                if is_chart_selected('connectsecure', 'asset_type_distribution') and "asset_type_distribution" in charts_data:
-                    cs["charts"]["asset_type_distribution"] = charts_data["asset_type_distribution"]
-                if is_chart_selected('connectsecure', 'operating_system_distribution') and "operating_system_distribution" in charts_data:
-                    cs["charts"]["operating_system_distribution"] = charts_data["operating_system_distribution"]
-                if is_chart_selected('connectsecure', 'security_risk_score') and "security_risk_score" in charts_data:
-                    cs["charts"]["security_risk_score"] = charts_data["security_risk_score"]
-                if is_chart_selected('connectsecure', 'vulnerability_severity') and "vulnerability_severity" in charts_data:
-                    cs["charts"]["vulnerability_severity"] = charts_data["vulnerability_severity"]
-                if is_chart_selected('connectsecure', 'agent_type_distribution') and "agent_type_distribution" in charts_data:
-                    cs["charts"]["agent_type_distribution"] = charts_data["agent_type_distribution"]
-
-                frontend_json["ConnectSecure"] = cs
-
-            # --- Bitdefender ---
-            elif platform_name == "Bitdefender":
-                bitdefender_metrics = full_data.get("bitdefender_metrics", {})
-                if bitdefender_metrics:
-                    bd = {"charts": {}, "tables": {}}
-                    bd_charts = bitdefender_metrics.get("charts", {})
-                    bd_tables = bitdefender_metrics.get("tables", {})
-
-                    if is_chart_selected('bitdefender', 'riskScore_bitdefender') and "riskScore_bitdefender" in bd_charts:
-                        bd["charts"]["riskScore_bitdefender"] = bd_charts["riskScore_bitdefender"]
-                    if is_chart_selected('bitdefender', 'inventory_summary_bitdefender') and "inventory_summary_bitdefender" in bd_charts:
-                        bd["charts"]["inventory_summary_bitdefender"] = bd_charts["inventory_summary_bitdefender"]
-                    if is_chart_selected('bitdefender', 'networkinventory_bitdefender') and "networkinventory_bitdefender" in bd_tables:
-                        bd["tables"]["networkinventory_bitdefender"] = bd_tables["networkinventory_bitdefender"]
-
-                    frontend_json["Bitdefender"] = bd
-
-            # --- SentinelOne ---
-            elif platform_name == "SentinelOne":
-                sentinelone_metrics = full_data.get("sentinelone_metrics", {})
-                if sentinelone_metrics:
-                    s1 = {"charts": {}}
-                    s1_charts = sentinelone_metrics.get("charts", {})
-
-                    s1_chart_keys = [
-                        "secured_devices_by_domain", "secured_devices_by_role",
-                        "secured_devices_by_os", "infected_endpoints",
-                        "agent_version_coverage", "endpoint_connection_status",
-                        "severity_levels_threats", "incident_status",
-                        "analyst_verdicts_threats", "threats_by_detection_engine",
-                        "threats_by_type"
-                    ]
-
-                    for chart_key in s1_chart_keys:
-                        if is_chart_selected('sentinelone', chart_key) and chart_key in s1_charts:
-                            s1["charts"][chart_key] = s1_charts[chart_key]
-
-                    frontend_json["SentinelOne"] = s1
-
-            # --- Cove ---
-            elif platform_name == "Cove":
-                cove_metrics = full_data.get("cove_metrics", {})
-                if cove_metrics:
-                    cove = {"charts": {}}
-
-                    if is_chart_selected('cove', 'total_devices_storage_summary_cove'):
-                        cove["charts"]["total_devices_storage_summary_cove"] = {
-                            "totalDevices": cove_metrics.get("device_count", 0) or 0,
-                            "used_storage": cove_metrics.get("total_storage_used", 0.0) or 0.0,
-                            "user_mailboxes": cove_metrics.get("user_mailboxes", 0) or 0,
-                            "shared_mailboxes": cove_metrics.get("shared_mailboxes", 0) or 0,
-                            "onedrive_user_accounts": cove_metrics.get("onedrive_user_accounts", 0) or 0
-                        }
-                    if is_chart_selected('cove', 'asset_type_distribution_cove'):
-                        asset_dist = cove_metrics.get("asset_distribution", {})
-                        cove["charts"]["asset_type_distribution_cove"] = {
-                            "physical": asset_dist.get("Physical", 0) or 0,
-                            "virtual": asset_dist.get("Virtual", 0) or 0,
-                            "others": asset_dist.get("Undefined", 0) or 0
-                        }
-                    if is_chart_selected('cove', 'devices_distribution_cove'):
-                        device_dist = cove_metrics.get("device_distribution", {})
-                        cove["charts"]["devices_distribution_cove"] = {
-                            "workstations": device_dist.get("Workstation", 0) or 0,
-                            "servers": device_dist.get("Server", 0) or 0,
-                            "others": device_dist.get("Undefined", 0) or 0
-                        }
-                    if is_chart_selected('cove', 'retention_policy_distribution_cove'):
-                        retention_dist = cove_metrics.get("retention_policy_distribution", {})
-                        cleaned_retention = {}
-                        for policy, count in retention_dist.items():
-                            if policy:
-                                cleaned_retention[policy] = count or 0
-                        cove["charts"]["retention_policy_distribution_cove"] = cleaned_retention or {}
-
-                    frontend_json["Cove"] = cove
-
-            return frontend_json
-
-        except Exception as e:
-            import traceback
-            logger.error(f"Failed to transform {platform_name} data: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return {}
-
     def _extract_organization_info(self, data: Dict[str, Any], reporting_period: str = None, account_id: int = None) -> Dict[str, Any]:
         """Extract organization information with dynamic company name from accounts table."""
         execution_info = data.get("execution_info", {})
@@ -681,23 +425,42 @@ class FrontendTransformer:
 
         # Fetch account_name from accounts table using account_id
         company_name = "Unknown Company"  # Default fallback
+
+        logger.info(f"🔍 DEBUG _extract_organization_info: account_id passed = {account_id}")
+
         if account_id:
             try:
-                from app.core.database.supabase_services import supabase
+                logger.info(f"🔍 DEBUG: Attempting to import SupabaseCredentialManager and fetch account_name for account_id={account_id}")
+                try:
+                    from security_reporting_system.config.supabase_client import SupabaseCredentialManager
+                except ImportError:
+                    from config.supabase_client import SupabaseCredentialManager
+
+                logger.info(f"🔍 DEBUG: Successfully imported SupabaseCredentialManager, now getting supabase client")
+                supabase_manager = SupabaseCredentialManager()
+                supabase = supabase_manager.supabase
+
+                logger.info(f"🔍 DEBUG: Got supabase client, now querying accounts table")
                 account_response = supabase.table('accounts')\
                     .select('account_name')\
                     .eq('id', account_id)\
                     .limit(1)\
                     .execute()
 
+                logger.info(f"🔍 DEBUG: Query executed, response.data = {account_response.data}")
+
                 if account_response.data and len(account_response.data) > 0:
                     company_name = account_response.data[0].get('account_name', 'Unknown Company')
-                    logger.info(f"Fetched company name: {company_name} for account_id: {account_id}")
+                    logger.info(f"✅ Fetched company name: {company_name} for account_id: {account_id}")
                 else:
-                    logger.warning(f"No account found for account_id: {account_id}")
+                    logger.warning(f"⚠️ No account found for account_id: {account_id}")
             except Exception as e:
-                logger.error(f"Failed to fetch account_name from accounts table: {e}")
+                logger.error(f"❌ Failed to fetch account_name from accounts table: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 # Fallback to default
+        else:
+            logger.warning(f"⚠️ account_id is None/empty, cannot fetch company name")
 
         return {
             "id": execution_info.get("organization_id", "unknown"),
@@ -1693,4 +1456,4 @@ class FrontendTransformer:
                 "data_sources_processed": [],
                 "report_type": "Error Report"
             }
-        }
+        }   
