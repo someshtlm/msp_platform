@@ -111,7 +111,8 @@ class SupabaseCredentialManager:
                 'autotask': 'autotask_id',
                 'connectsecure': 'connectsecure_id',
                 'bitdefender': 'bitdefender_company_id',
-                'cove': 'cove_customer_id'
+                'cove': 'cove_customer_id',
+                'sentinelone': 'sentinelone_site_id'
             }
 
             # Extract platform IDs from table query response
