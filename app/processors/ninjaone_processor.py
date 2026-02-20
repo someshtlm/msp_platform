@@ -369,26 +369,42 @@ class NinjaOneProcessor:
             # Use displayName if available and not empty, otherwise fallback to systemName
             device_name = device.get("displayName") or device.get("systemName", "")
 
+            # Standard fields with VM guest fallbacks
+            os_name = device.get("os", {}).get("name", "") or device.get("guestOSFullName", "")
+            ram_bytes = device.get("memory", {}).get("capacity", 0) or device.get("memorySize", 0)
+            make = device.get("system", {}).get("manufacturer", "")
+            model = device.get("system", {}).get("model", "")
+
+            # VM guest fallbacks for make/model
+            if not make and device.get("deviceType"):
+                make = "Virtual Machine"
+            if not model and device.get("deviceType"):
+                model = device.get("deviceType", "")
+
             formatted_device = {
                 "workstation": device_name,
                 "user": device.get("lastLoggedInUser", ""),
-                "make": device.get("system", {}).get("manufacturer", ""),
+                "make": make,
                 "serial": device.get("system", {}).get("serialNumber", ""),
-                "model": device.get("system", {}).get("model", ""),
-                "os": device.get("os", {}).get("name", ""),
-                "ram_gb": self._bytes_to_gb(device.get("memory", {}).get("capacity", 0)),
+                "model": model,
+                "os": os_name,
+                "ram_gb": self._bytes_to_gb(ram_bytes),
                 "cpu": "",
                 "storage_gb": 0,
                 "free_space_gb": 0,
                 "created": device.get("created"),
-                "nodeClass": node_class,  # Keep nodeClass for debugging if needed
+                "nodeClass": node_class,
                 "location": location_name,
-                "references": device.get("references", {})  # Include warranty data for age calculation
+                "references": device.get("references", {})
             }
 
+            # CPU: standard field first, then VM guest fallback
             processors = device.get("processors", [])
             if processors and len(processors) > 0:
                 formatted_device["cpu"] = processors[0].get("name", "")
+            elif device.get("cpuCores"):
+                cores = device.get("cpuCores", 0)
+                formatted_device["cpu"] = f"{cores} Core{'s' if cores != 1 else ''}"
 
             volumes = device.get("volumes", [])
             total_storage_bytes = 0
@@ -404,12 +420,14 @@ class NinjaOneProcessor:
             formatted_device["storage_gb"] = self._bytes_to_gb(total_storage_bytes)
             formatted_device["free_space_gb"] = self._bytes_to_gb(total_free_space_bytes)
 
-            # Separate devices based on nodeClass (check if "server" is in the string)
+            # Separate devices: check nodeClass first, then fallback to OS/systemName for VM guests
             node_class_lower = node_class.lower()
-            if "server" in node_class_lower:
+            device_os_lower = os_name.lower()
+            system_name_lower = (device.get("systemName", "") or "").lower()
+
+            if "server" in node_class_lower or "server" in device_os_lower or "server" in system_name_lower:
                 server_devices.append(formatted_device)
             else:
-                # All other devices (workstations, desktops, etc.)
                 workstation_devices.append(formatted_device)
 
         return {

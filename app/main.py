@@ -113,6 +113,8 @@ from app.routes.admin.clients import router as client_router
 from app.routes.security.reports import router as report_router
 from app.routes.security.cache_test import router as cache_test_router
 from app.routes.clients.charts import router as integration_platform_router
+from app.routes.reports.send_poc_email import router as send_poc_email_router
+from app.routes.reports.download_pdf import router as download_router
 
 
 
@@ -128,6 +130,8 @@ app.include_router(client_router, prefix="/api",tags=["client page"])
 app.include_router(report_router, prefix="/api", tags=["security reports"])
 app.include_router(cache_test_router, prefix="/api", tags=["cache testing"])
 app.include_router(integration_platform_router, prefix="/api", tags=["integration platforms"])
+app.include_router(send_poc_email_router, prefix="/api", tags=["POC email reports"])
+app.include_router(download_router, prefix="/api", tags=["PDF Download"])
 
 # Configure static file serving for PDF reports
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

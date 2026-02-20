@@ -96,6 +96,8 @@ class BitdefenderClient:
             "params": {
                 "page": page,
                 "perPage": per_page,
+                "isManaged": True,
+                "filters": {"depth": {"allItemsRecursively": True}},
                 "options": {
                     "returnProductOutdated": True,
                     "includeScanLogs": True

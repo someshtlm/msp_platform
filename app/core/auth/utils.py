@@ -70,6 +70,9 @@ class OAuth2ClientCredentialsClient:
         logger.info(f"   → Token URL: {self.token_url}")
         response = requests.post(self.token_url, headers=headers, data=data, timeout=15)
         logger.info(f"   → Response Status: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"   → Token Error Response: {response.text}")
+            print(f"Token Error Response: {response.text}")
         response.raise_for_status()
         token_data = response.json()
 

@@ -22,6 +22,7 @@ from app.processors.autotask_processor import AutotaskProcessor
 from app.processors.connectsecure_processor import ConnectSecureProcessor
 from app.processors.bitdefender_processor import BitdefenderProcessor
 from app.processors.cove_processor import CoveProcessor
+from app.processors.sentinelone_processor import SentinelOneProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class SecurityAssessmentOrchestrator:
         self.connectsecure_processor = None
         self.bitdefender_processor = None
         self.cove_processor = None
+        self.sentinelone_processor = None
 
         logger.info(f"SecurityAssessmentOrchestrator initialized with account_id: {account_id}, org_id: {org_id}")
 
@@ -97,6 +99,7 @@ class SecurityAssessmentOrchestrator:
         connectsecure_company_id = org_data.get('connectsecure_id')
         bitdefender_company_id = org_data.get('bitdefender_company_id')
         cove_customer_id = org_data.get('cove_customer_id')
+        sentinelone_site_id = org_data.get('sentinelone_site_id')
 
         logger.info(f"Organization: {org_data.get('name', 'Unknown')} (ID: {self.org_id})")
         logger.info(f"  NinjaOne Org ID: {ninjaone_org_id}")
@@ -104,6 +107,7 @@ class SecurityAssessmentOrchestrator:
         logger.info(f"  ConnectSecure Company ID: {connectsecure_company_id}")
         logger.info(f"  Bitdefender Company ID: {bitdefender_company_id}")
         logger.info(f"  Cove Customer ID: {cove_customer_id}")
+        logger.info(f"  SentinelOne Site ID: {sentinelone_site_id}")
 
         if ninjaone_org_id:
             self.ninjaone_processor = NinjaOneProcessor(
@@ -147,12 +151,22 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"No Cove customer_id found - Cove data will be skipped")
             self.cove_processor = None
 
+        if sentinelone_site_id:
+            self.sentinelone_processor = SentinelOneProcessor(
+                account_id=self.account_id,
+                sentinelone_site_id=sentinelone_site_id
+            )
+        else:
+            logger.warning(f"No SentinelOne site_id found - SentinelOne data will be skipped")
+            self.sentinelone_processor = None
+
         return {
             'ninjaone_org_id': ninjaone_org_id,
             'autotask_company_id': autotask_company_id,
             'connectsecure_company_id': connectsecure_company_id,
             'bitdefender_company_id': bitdefender_company_id,
             'cove_customer_id': cove_customer_id,
+            'sentinelone_site_id': sentinelone_site_id,
             'organization_name': org_data.get('name', 'Unknown')
         }
 
@@ -367,14 +381,33 @@ class SecurityAssessmentOrchestrator:
                 logger.warning(f"Failed to fetch Cove data: {e}")
                 return None, e
 
+        async def fetch_sentinelone():
+            if not self.sentinelone_processor:
+                logger.info("Skipping SentinelOne - not configured")
+                return None, None
+            logger.info("Fetching SentinelOne data...")
+            try:
+                raw = await asyncio.to_thread(
+                    self.sentinelone_processor.fetch_all_data,
+                    month_name
+                )
+                logger.info(f"SentinelOne data fetched: {len(raw.get('agents', []))} agents, {len(raw.get('threats', []))} threats")
+                return raw, None
+            except Exception as e:
+                logger.error(f"Failed to fetch SentinelOne data: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                return None, e
+
         logger.info("Starting PARALLEL data fetching from all platforms...")
 
-        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result = await asyncio.gather(
+        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result, sentinelone_result = await asyncio.gather(
             fetch_ninjaone(),
             fetch_autotask(),
             fetch_connectsecure(),
             fetch_bitdefender(),
-            fetch_cove()
+            fetch_cove(),
+            fetch_sentinelone()
         )
 
         logger.info("Processing fetched data...")
@@ -444,7 +477,189 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"Cove fetch failed: {cove_error}")
             logger.info("Continuing with available data sources...")
 
+        sentinelone_raw, sentinelone_error = sentinelone_result
+        if sentinelone_raw and not sentinelone_error:
+            logger.info("Processing SentinelOne data...")
+            sentinelone_processed = self.sentinelone_processor.process_all_data(sentinelone_raw)
+            final_data.update(sentinelone_processed)
+            if "execution_info" in final_data:
+                final_data["execution_info"]["data_sources"].append("SentinelOne")
+            logger.info("SentinelOne data processed successfully")
+        elif sentinelone_error:
+            logger.error(f"SentinelOne fetch failed: {sentinelone_error}")
+            logger.info("Continuing with available data sources...")
+
         return final_data
+
+    async def stream_data_per_platform(self, company_id: Optional[int] = None, month_name: str = None):
+        """
+        Async generator that yields each platform's data as it completes.
+        All platforms run in PARALLEL, but results are yielded one-by-one as each finishes.
+        Heartbeats are sent every 10 seconds to keep the connection alive.
+
+        Yields:
+            dict with keys: type, platform (optional), data (optional), progress, message (optional)
+        """
+        global _ninjaone_cache, _autotask_cache, _cache_timestamp
+        _ninjaone_cache = None
+        _autotask_cache = None
+        _cache_timestamp = datetime.now()
+
+        data_sources = []
+        platforms_done = 0
+        total_platforms = sum(1 for p in [
+            self.ninjaone_processor, self.autotask_processor,
+            self.connectsecure_processor, self.bitdefender_processor,
+            self.cove_processor, self.sentinelone_processor
+        ] if p is not None)
+
+        if total_platforms == 0:
+            yield {"type": "error", "message": "No platforms configured", "progress": 0}
+            return
+
+        # Map platform name to its fetch+process coroutine
+        async def fetch_and_process_ninjaone():
+            if not self.ninjaone_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.ninjaone_processor.fetch_all_data,
+                use_time_filter=True,
+                month_name=month_name
+            )
+            processed = self.ninjaone_processor.process_all_data(raw)
+            _ninjaone_cache = raw
+            return processed
+
+        async def fetch_and_process_autotask():
+            if not self.autotask_processor:
+                return None
+            raw = await self.autotask_processor.fetch_all_data(company_id, month_name)
+            processed = self.autotask_processor.process_all_data(raw, company_id)
+            _autotask_cache = raw
+            return processed
+
+        async def fetch_and_process_connectsecure():
+            if not self.connectsecure_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.connectsecure_processor.fetch_all_data,
+                self.connectsecure_processor.company_id,
+                month_name
+            )
+            if len(raw.get('assets', [])) == 0:
+                logger.warning("ConnectSecure: No assets found")
+                return None
+            processed = self.connectsecure_processor.process_all_data(raw, month_name=month_name)
+            return processed
+
+        async def fetch_and_process_bitdefender():
+            if not self.bitdefender_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.bitdefender_processor.fetch_all_data,
+                month_name
+            )
+            processed = self.bitdefender_processor.process_all_data(raw)
+            return processed
+
+        async def fetch_and_process_cove():
+            if not self.cove_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.cove_processor.fetch_all_data,
+                self.cove_processor.customer_id
+            )
+            processed = self.cove_processor.process_all_data(raw)
+            return processed
+
+        async def fetch_and_process_sentinelone():
+            if not self.sentinelone_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.sentinelone_processor.fetch_all_data,
+                month_name
+            )
+            processed = self.sentinelone_processor.process_all_data(raw)
+            return processed
+
+        # Create named tasks for all configured platforms
+        tasks = {}
+        if self.ninjaone_processor:
+            tasks["NinjaOne"] = asyncio.create_task(fetch_and_process_ninjaone())
+        if self.autotask_processor:
+            tasks["Autotask"] = asyncio.create_task(fetch_and_process_autotask())
+        if self.connectsecure_processor:
+            tasks["ConnectSecure"] = asyncio.create_task(fetch_and_process_connectsecure())
+        if self.bitdefender_processor:
+            tasks["Bitdefender"] = asyncio.create_task(fetch_and_process_bitdefender())
+        if self.cove_processor:
+            tasks["Cove"] = asyncio.create_task(fetch_and_process_cove())
+        if self.sentinelone_processor:
+            tasks["SentinelOne"] = asyncio.create_task(fetch_and_process_sentinelone())
+
+        logger.info(f"Started {len(tasks)} platform tasks in parallel: {list(tasks.keys())}")
+
+        # Poll tasks every 2 seconds, send heartbeat every 10 seconds
+        heartbeat_interval = 10
+        last_heartbeat = asyncio.get_event_loop().time()
+        completed_platforms = set()
+
+        while len(completed_platforms) < len(tasks):
+            # Check each task
+            for platform_name, task in tasks.items():
+                if platform_name in completed_platforms:
+                    continue
+                if task.done():
+                    completed_platforms.add(platform_name)
+                    platforms_done += 1
+                    progress = int((platforms_done / total_platforms) * 85) + 10  # 10-95 range
+
+                    try:
+                        result = task.result()
+                        if result:
+                            data_sources.append(platform_name)
+                            yield {
+                                "type": "platform_data",
+                                "platform": platform_name,
+                                "data": result,
+                                "progress": progress
+                            }
+                            logger.info(f"Streamed {platform_name} data (progress: {progress}%)")
+                        else:
+                            yield {
+                                "type": "error",
+                                "platform": platform_name,
+                                "message": f"{platform_name}: No data available",
+                                "progress": progress
+                            }
+                    except Exception as e:
+                        logger.error(f"{platform_name} fetch failed: {e}")
+                        yield {
+                            "type": "error",
+                            "platform": platform_name,
+                            "message": f"{platform_name} failed: {str(e)}",
+                            "progress": progress
+                        }
+
+            # Send heartbeat every 10 seconds if not all done
+            if len(completed_platforms) < len(tasks):
+                now = asyncio.get_event_loop().time()
+                if now - last_heartbeat >= heartbeat_interval:
+                    pending = [p for p in tasks if p not in completed_platforms]
+                    yield {
+                        "type": "heartbeat",
+                        "progress": int((platforms_done / total_platforms) * 85) + 10,
+                        "message": f"Waiting for: {', '.join(pending)}"
+                    }
+                    last_heartbeat = now
+                await asyncio.sleep(2)  # Poll every 2 seconds
+
+        # Yield data_sources list for execution_info
+        yield {
+            "type": "stream_done",
+            "data_sources": data_sources,
+            "progress": 95
+        }
 
     async def test_all_connections(self) -> Dict[str, bool]:
         """Test connectivity to all data sources."""
