@@ -204,7 +204,7 @@ async def get_platform_list(u_id: str):
                 "platform_id": platform_id,
                 "name": record.get('integration_display_name'),
                 "description": record.get('description', ''),
-                "enabled": record.get('is_active', False),
+                "enabled": bool(platform_credentials and any(v for v in platform_credentials.values())),
                 "integrationFields": fields_with_values,
                 "chartlist": charts_by_platform.get(platform_id, []),
                 "account_selected_charts": selected_charts_by_platform.get(platform_id, [])
