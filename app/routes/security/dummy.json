@@ -1135,34 +1135,20 @@
                 "secured_devices_by_domain": {
                   "workgroup": 68,
                   "drf": 12,
-                  "pg": 3,
-                  "api": 4,
                   "hiscross": 133,
                   "dynamesh": 77,
-                  "rcw": 8,
-                  "corporate": 18,
-                  "fidelity": 24,
-                  "katz": 0,
                   "others": 10,
-                  "valtech": 13,
                   "attlocal_dot_net": 15
                 },
                 "secured_devices_by_role": {
                   "desktop": 11,
                   "laptop": 60,
-                  "server": 10,
-                  "other": 6,
-                  "kubernetes_node": 8,
-                  "storage": 3,
-                  "kubernetes_pod": 1,
-                  "ecs_task": 4,
-                  "kubernetes_helper": 9
+                  "server": 10
                 },
                 "secured_devices_by_os": {
                   "windows": 69,
                   "macos": 2,
-                  "linux": 5,
-                  "windows_legacy": 1
+                  "linux": 5
                 },
                 "infected_endpoints": {
                   "healthy": 71,
@@ -1176,8 +1162,8 @@
                 "endpoint_connection_status": {
                   "connected": 71,
                   "disconnected": 23,
-                  "connecting": 1,
-                  "disconnecting": 2
+                  "connecting": 0,
+                  "disconnecting": 0
                 },
                 "severity_levels_threats": {
                   "suspicious": 5,
@@ -1197,21 +1183,14 @@
                 },
                 "threats_by_detection_engine": {
                   "sentinelone_cloud": 7,
-                  "on-write_static_ai": 2,
-                  "on_write_static_ai_suspicious": 2,
+                  "on_write_static_ai": 2,
                   "behavioral_ai": 10,
-                  "documents,_scripts": 19,
-                  "user-defined_blocklist": 4,
-                  "reputation": 3,
-                  "cloud_detection": 8,
-                  "anti_exploitation_fileless": 1,
-                  "intrusion_detection": 6
+                  "reputation": 3
                 },
                 "threats_by_type": {
                   "Malware": 1,
                   "Ransomware": 3,
-                  "General": 1,
-                  "Trojan": 0
+                  "General": 1
                 }
               }
             },

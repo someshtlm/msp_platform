@@ -53,7 +53,7 @@ class SentinelOneClient:
 
                 if response.status_code != 200:
                     logger.error(f"SentinelOne Agents API Error: Status {response.status_code}, Response: {response.text}")
-                    break
+                    raise RuntimeError(f"SentinelOne Agents API Error: Status {response.status_code}, Response: {response.text}")
 
                 data = response.json()
                 agents = data.get("data", [])
@@ -73,7 +73,7 @@ class SentinelOneClient:
 
             except requests.exceptions.RequestException as e:
                 logger.error(f"SentinelOne agents request error: {e}")
-                break
+                raise RuntimeError(f"SentinelOne agents request error: {e}")
 
         logger.info(f"Successfully fetched {len(all_agents)} total agents across {page_count} pages")
         return all_agents
@@ -115,7 +115,7 @@ class SentinelOneClient:
 
                 if response.status_code != 200:
                     logger.error(f"SentinelOne Threats API Error: Status {response.status_code}, Response: {response.text}")
-                    break
+                    raise RuntimeError(f"SentinelOne Threats API Error: Status {response.status_code}, Response: {response.text}")
 
                 data = response.json()
                 threats = data.get("data", [])
@@ -135,7 +135,7 @@ class SentinelOneClient:
 
             except requests.exceptions.RequestException as e:
                 logger.error(f"SentinelOne threats request error: {e}")
-                break
+                raise RuntimeError(f"SentinelOne threats request error: {e}")
 
         logger.info(f"Successfully fetched {len(all_threats)} total threats across {page_count} pages")
         return all_threats

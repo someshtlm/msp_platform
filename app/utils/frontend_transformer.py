@@ -415,16 +415,16 @@ class FrontendTransformer:
                 frontend_json["SentinelOne"] = {
                     "charts": {
                         "secured_devices_by_domain": {},
-                        "secured_devices_by_role": {"desktop": 0, "laptop": 0, "server": 0, "other": 0, "kubernetes_node": 0, "storage": 0, "kubernetes_pod": 0, "ecs_task": 0, "kubernetes_helper": 0},
-                        "secured_devices_by_os": {"windows": 0, "macos": 0, "linux": 0, "windows_legacy": 0},
+                        "secured_devices_by_role": {},
+                        "secured_devices_by_os": {},
                         "infected_endpoints": {"healthy": 0, "infected": 0},
                         "agent_version_coverage": {},
                         "endpoint_connection_status": {"connected": 0, "disconnected": 0, "connecting": 0, "disconnecting": 0},
-                        "severity_levels_threats": {"suspicious": 0, "malicious": 0, "n/a": 0},
+                        "severity_levels_threats": {},
                         "incident_status": {"resolved": 0, "unresolved": 0, "in_progress": 0},
                         "analyst_verdicts_threats": {"false_positive": 0, "true_positive": 0, "suspicious": 0, "undefined": 0},
-                        "threats_by_detection_engine": {"sentinelone_cloud": 0, "on-write_static_ai": 0, "on_write_static_ai_suspicious": 0, "behavioral_ai": 0, "documents,_scripts": 0, "user-defined_blocklist": 0, "reputation": 0, "cloud_detection": 0, "anti_exploitation_fileless": 0, "intrusion_detection": 0},
-                        "threats_by_type": {"Malware": 0, "Ransomware": 0, "General": 0, "Trojan": 0}
+                        "threats_by_detection_engine": {},
+                        "threats_by_type": {}
                     }
                 }
 
