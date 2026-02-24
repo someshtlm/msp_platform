@@ -110,22 +110,21 @@ class SentinelOneProcessor:
 
         # Process ALL agents in one loop
         for agent in agents:
-            # Domain counts
+            # Domain counts - lowercase, dots replaced with _dot_, empty → "others"
             domain = agent.get("domain", "").strip().lower()
             if domain:
-                # Sanitize domain keys: replace dots with _dot_
                 if "." in domain:
                     domain = domain.replace(".", "_dot_")
                 domain_counts[domain] = domain_counts.get(domain, 0) + 1
             else:
                 domain_counts["others"] = domain_counts.get("others", 0) + 1
 
-            # Machine type counts
+            # Machine type counts - lowercase
             machine_type = agent.get("machineType", "").lower().strip()
             if machine_type:
                 machine_type_counts[machine_type] += 1
 
-            # OS type counts
+            # OS type counts - lowercase
             os_type = agent.get("osType", "").lower().strip()
             if os_type:
                 os_type_counts[os_type] += 1
@@ -142,7 +141,7 @@ class SentinelOneProcessor:
             if agent_version:
                 agent_version_counts[agent_version] = agent_version_counts.get(agent_version, 0) + 1
 
-            # Network status counts
+            # Network status counts - lowercase
             network_status = agent.get("networkStatus", "").lower().strip()
             if network_status:
                 network_status_counts[network_status] += 1
@@ -151,110 +150,104 @@ class SentinelOneProcessor:
         for threat in threats:
             threat_info = threat.get("threatInfo", {})
 
-            # Confidence levels (severity)
+            # Confidence levels (severity) - lowercase, empty → "n/a"
             confidence_level = threat_info.get("confidenceLevel", "").lower().strip()
             if confidence_level:
                 confidence_level_counts[confidence_level] += 1
             else:
                 confidence_level_counts["n/a"] += 1
 
-            # Incident statuses
+            # Incident statuses - lowercase
             incident_status = threat_info.get("incidentStatus", "").lower().strip()
             if incident_status:
                 incident_status_counts[incident_status] += 1
 
-            # Analyst verdicts
+            # Analyst verdicts - lowercase, empty → "undefined"
             analyst_verdict = threat_info.get("analystVerdict", "").lower().strip()
             if analyst_verdict:
                 analyst_verdict_counts[analyst_verdict] += 1
             else:
                 analyst_verdict_counts["undefined"] += 1
 
-            # Detection engines
+            # Detection engines - normalize to lowercase_underscore
             detection_engines = threat_info.get("detectionEngines", [])
             for engine in detection_engines:
                 engine_title = engine.get("title", "").strip()
                 if engine_title:
-                    detection_engine_counts[engine_title] += 1
+                    normalized_key = engine_title.lower().replace(" / ", "_").replace(" - ", "_").replace(" ", "_").replace("-", "_")
+                    detection_engine_counts[normalized_key] += 1
 
-            # Threat types by classification
+            # Threat types by classification - keep original case from API
             classification = threat_info.get("classification", "").strip()
             if classification:
                 threat_type_counts[classification] += 1
 
         # Build the 11 charts
-        # Hardcoded domain keys + dynamic overflow
-        hardcoded_domains = ["workgroup", "drf", "pg", "api", "hiscross", "dynamesh", "rcw", "corporate", "fidelity", "katz", "others"]
-        secured_devices_by_domain = {d: domain_counts.get(d, 0) for d in hardcoded_domains}
-        # Add any dynamic domains not in the hardcoded list
-        for domain, count in domain_counts.items():
-            if domain not in hardcoded_domains:
-                secured_devices_by_domain[domain] = count
-
         charts = {
-            "secured_devices_by_domain": secured_devices_by_domain,
-            "secured_devices_by_role": {
-                "desktop": machine_type_counts.get("desktop", 0),
-                "laptop": machine_type_counts.get("laptop", 0),
-                "server": machine_type_counts.get("server", 0),
-                "other": machine_type_counts.get("other", 0),
-                "kubernetes_node": machine_type_counts.get("kubernetes_node", 0),
-                "storage": machine_type_counts.get("storage", 0),
-                "kubernetes_pod": machine_type_counts.get("kubernetes_pod", 0),
-                "ecs_task": machine_type_counts.get("ecs_task", 0),
-                "kubernetes_helper": machine_type_counts.get("kubernetes_helper", 0)
-            },
-            "secured_devices_by_os": {
-                "windows": os_type_counts.get("windows", 0),
-                "macos": os_type_counts.get("macos", 0),
-                "linux": os_type_counts.get("linux", 0),
-                "windows_legacy": os_type_counts.get("windows_legacy", 0)
-            },
+            # FULLY DYNAMIC - only what exists
+            "secured_devices_by_domain": domain_counts,
+
+            # FULLY DYNAMIC - only what exists
+            "secured_devices_by_role": dict(machine_type_counts),
+
+            # FULLY DYNAMIC - only what exists
+            "secured_devices_by_os": dict(os_type_counts),
+
+            # ALWAYS present - healthy/infected
             "infected_endpoints": {
                 "healthy": healthy_count,
                 "infected": infected_count
             },
+
+            # FULLY DYNAMIC - only versions that exist
             "agent_version_coverage": agent_version_counts,
+
+            # HARDCODED + DYNAMIC - guaranteed 4 fields + any new ones
             "endpoint_connection_status": {
                 "connected": network_status_counts.get("connected", 0),
                 "disconnected": network_status_counts.get("disconnected", 0),
                 "connecting": network_status_counts.get("connecting", 0),
-                "disconnecting": network_status_counts.get("disconnecting", 0)
+                "disconnecting": network_status_counts.get("disconnecting", 0),
+                **{
+                    status: count
+                    for status, count in network_status_counts.items()
+                    if status not in ["connected", "disconnected", "connecting", "disconnecting"]
+                }
             },
-            "severity_levels_threats": {
-                "suspicious": confidence_level_counts.get("suspicious", 0),
-                "malicious": confidence_level_counts.get("malicious", 0),
-                "n/a": confidence_level_counts.get("n/a", 0)
-            },
+
+            # FULLY DYNAMIC - only severity levels that exist
+            "severity_levels_threats": dict(confidence_level_counts),
+
+            # HARDCODED + DYNAMIC - guaranteed 3 fields + any new ones
             "incident_status": {
                 "resolved": incident_status_counts.get("resolved", 0),
                 "unresolved": incident_status_counts.get("unresolved", 0),
-                "in_progress": incident_status_counts.get("in_progress", 0)
+                "in_progress": incident_status_counts.get("in_progress", 0),
+                **{
+                    status: count
+                    for status, count in incident_status_counts.items()
+                    if status not in ["resolved", "unresolved", "in_progress"]
+                }
             },
+
+            # HARDCODED + DYNAMIC - guaranteed 4 fields + any new ones
             "analyst_verdicts_threats": {
                 "false_positive": analyst_verdict_counts.get("false_positive", 0),
                 "true_positive": analyst_verdict_counts.get("true_positive", 0),
                 "suspicious": analyst_verdict_counts.get("suspicious", 0),
-                "undefined": analyst_verdict_counts.get("undefined", 0)
+                "undefined": analyst_verdict_counts.get("undefined", 0),
+                **{
+                    verdict: count
+                    for verdict, count in analyst_verdict_counts.items()
+                    if verdict not in ["false_positive", "true_positive", "suspicious", "undefined"]
+                }
             },
-            "threats_by_detection_engine": {
-                "sentinelone_cloud": detection_engine_counts.get("SentinelOne Cloud", 0),
-                "on-write_static_ai": detection_engine_counts.get("On-Write Static AI", 0),
-                "on_write_static_ai_suspicious": detection_engine_counts.get("On-Write Static AI - Suspicious", 0),
-                "behavioral_ai": detection_engine_counts.get("Behavioral AI", 0),
-                "documents,_scripts": detection_engine_counts.get("Documents, Scripts", 0),
-                "user-defined_blocklist": detection_engine_counts.get("User-Defined Blocklist", 0),
-                "reputation": detection_engine_counts.get("Reputation", 0),
-                "cloud_detection": detection_engine_counts.get("Cloud Detection", 0),
-                "anti_exploitation_fileless": detection_engine_counts.get("Anti Exploitation / Fileless", 0),
-                "intrusion_detection": detection_engine_counts.get("Intrusion Detection", 0)
-            },
-            "threats_by_type": {
-                "Malware": threat_type_counts.get("Malware", 0),
-                "Ransomware": threat_type_counts.get("Ransomware", 0),
-                "General": threat_type_counts.get("General", 0),
-                "Trojan": threat_type_counts.get("Trojan", 0)
-            }
+
+            # FULLY DYNAMIC - only engines that exist
+            "threats_by_detection_engine": dict(detection_engine_counts),
+
+            # FULLY DYNAMIC - only types that exist
+            "threats_by_type": dict(threat_type_counts)
         }
 
         processed = {
