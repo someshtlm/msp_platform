@@ -322,6 +322,26 @@ class FrontendTransformer:
                                 frontend_json["SentinelOne"] = {"charts": {}}
                             frontend_json["SentinelOne"]["charts"][chart_key] = s1_charts[chart_key]
 
+                # NodeWare charts (2 charts, 4 tables)
+                nodeware_metrics = full_data.get("nodeware_metrics", {})
+                if nodeware_metrics:
+                    nw_charts = nodeware_metrics.get("charts", {})
+                    nw_tables = nodeware_metrics.get("tables", {})
+
+                    nw_chart_keys = ["summary_metrics", "cvss_breakdown"]
+                    for chart_key in nw_chart_keys:
+                        if is_chart_selected('nodeware', chart_key) and chart_key in nw_charts:
+                            if "NodeWare" not in frontend_json:
+                                frontend_json["NodeWare"] = {"charts": {}, "tables": {}}
+                            frontend_json["NodeWare"]["charts"][chart_key] = nw_charts[chart_key]
+
+                    nw_table_keys = ["known_exploited_cves", "cvss_prioritized", "asset_risk_score", "epss_prioritized"]
+                    for table_key in nw_table_keys:
+                        if is_chart_selected('nodeware', table_key) and table_key in nw_tables:
+                            if "NodeWare" not in frontend_json:
+                                frontend_json["NodeWare"] = {"charts": {}, "tables": {}}
+                            frontend_json["NodeWare"]["tables"][table_key] = nw_tables[table_key]
+
             except Exception as e:
                 logger.warning(f"Failed to extract chart/table data: {e}")
                 # Fallback structure
@@ -425,6 +445,18 @@ class FrontendTransformer:
                         "analyst_verdicts_threats": {"false_positive": 0, "true_positive": 0, "suspicious": 0, "undefined": 0},
                         "threats_by_detection_engine": {},
                         "threats_by_type": {}
+                    }
+                }
+                frontend_json["NodeWare"] = {
+                    "charts": {
+                        "summary_metrics": {"average_score": 0, "assets": 0, "unique_cves": 0},
+                        "cvss_breakdown": {"critical": 0, "high": 0, "medium": 0, "low": 0, "unique_cves": 0}
+                    },
+                    "tables": {
+                        "known_exploited_cves": [],
+                        "cvss_prioritized": [],
+                        "asset_risk_score": [],
+                        "epss_prioritized": []
                     }
                 }
 
@@ -623,6 +655,24 @@ class FrontendTransformer:
 
                     frontend_json["SentinelOne"] = s1
 
+            # --- NodeWare ---
+            elif platform_name == "NodeWare":
+                nodeware_metrics = full_data.get("nodeware_metrics", {})
+                if nodeware_metrics:
+                    nw = {"charts": {}, "tables": {}}
+                    nw_charts = nodeware_metrics.get("charts", {})
+                    nw_tables = nodeware_metrics.get("tables", {})
+
+                    for chart_key in ["summary_metrics", "cvss_breakdown"]:
+                        if is_chart_selected('nodeware', chart_key) and chart_key in nw_charts:
+                            nw["charts"][chart_key] = nw_charts[chart_key]
+
+                    for table_key in ["known_exploited_cves", "cvss_prioritized", "asset_risk_score", "epss_prioritized"]:
+                        if is_chart_selected('nodeware', table_key) and table_key in nw_tables:
+                            nw["tables"][table_key] = nw_tables[table_key]
+
+                    frontend_json["NodeWare"] = nw
+
             # --- Cove ---
             elif platform_name == "Cove":
                 cove_metrics = full_data.get("cove_metrics", {})
@@ -811,18 +861,7 @@ class FrontendTransformer:
                 "completed": [],
                 "days": []
             },
-            "monthly_tickets_by_type": {
-                "workstation": 0,
-                "email": 0,
-                "user_access": 0,
-                "application_software": 0,
-                "server": 0,
-                "network_internet": 0,
-                "printer_scanner": 0,
-                "shared_drive": 0,
-                "cybersecurity": 0,
-                "other": 0
-            },
+            "monthly_tickets_by_type": {},
             "open_ticket_priority_distribution": {
                 "critical": 0,
                 "high": 0,
@@ -905,47 +944,15 @@ class FrontendTransformer:
             # Monthly tickets by issue type (always include with fallback)
             monthly_by_issue = ticket_analytics.get("monthly_by_issue_type", [])
 
-            # Initialize with default structure
-            ticket_types = {
-                "workstation": 0,
-                "email": 0,
-                "user_access": 0,
-                "application_software": 0,
-                "server": 0,
-                "network_internet": 0,
-                "printer_scanner": 0,
-                "shared_drive": 0,
-                "cybersecurity": 0,
-                "other": 0
-            }
+            # Build dynamic issue type dict directly from API labels
+            ticket_types = {}
 
-            # Populate with real data if available
             if monthly_by_issue:
                 for item in monthly_by_issue:
                     issue_type = item.get("issue_type", "Unknown")
                     count = item.get("count", 0)
-
-                    # Map to simplified names for frontend
-                    if "Workstation" in issue_type or "Laptop" in issue_type or "Desktop" in issue_type:
-                        ticket_types["workstation"] = count
-                    elif "Email" in issue_type:
-                        ticket_types["email"] = count
-                    elif "User Access" in issue_type or "Management" in issue_type:
-                        ticket_types["user_access"] = count
-                    elif "Application" in issue_type or "Software" in issue_type:
-                        ticket_types["application_software"] = count
-                    elif "Server" in issue_type:
-                        ticket_types["server"] = count
-                    elif "Network" in issue_type or "Internet" in issue_type:
-                        ticket_types["network_internet"] = count
-                    elif "Printer" in issue_type or "Scanner" in issue_type or "Copier" in issue_type:
-                        ticket_types["printer_scanner"] = count
-                    elif "Shared Drive" in issue_type or "Drive" in issue_type:
-                        ticket_types["shared_drive"] = count
-                    elif "Cybersecurity" in issue_type or "Security" in issue_type:
-                        ticket_types["cybersecurity"] = count
-                    else:
-                        ticket_types["other"] += count  # Accumulate truly other types
+                    if issue_type:
+                        ticket_types[issue_type] = ticket_types.get(issue_type, 0) + count
 
             # Always include this data structure
             charts["monthly_tickets_by_type"] = ticket_types
@@ -1123,18 +1130,7 @@ class FrontendTransformer:
 
         # Ensure monthly_tickets_by_type is always present (fallback if no Autotask data)
         if "monthly_tickets_by_type" not in charts:
-            charts["monthly_tickets_by_type"] = {
-                "workstation": 0,
-                "email": 0,
-                "user_access": 0,
-                "application_software": 0,
-                "server": 0,
-                "network_internet": 0,
-                "printer_scanner": 0,
-                "shared_drive": 0,
-                "cybersecurity": 0,
-                "other": 0
-            }
+            charts["monthly_tickets_by_type"] = {}
 
         # Ensure priority_distribution is always present (fallback if no Autotask data)
         if "open_ticket_priority_distribution" not in charts:

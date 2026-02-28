@@ -54,7 +54,7 @@ class AutotaskProcessor:
                 base_url=autotask_creds.get('autotask_base_url')
             )
 
-            logger.info(f"✅ Loaded Autotask credentials from account_id: {account_id}")
+            logger.info(f"Loaded Autotask credentials from account_id: {account_id}")
 
         # OLD: Fallback to legacy credential_id method
         elif credential_id is not None:

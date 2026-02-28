@@ -214,7 +214,7 @@ class EncryptionManager:
         }
         """
         # Check if already in nested format (has platform keys)
-        if any(key in credentials for key in ['ninjaone', 'autotask', 'connectsecure']):
+        if any(key in credentials for key in ['ninjaone', 'autotask', 'connectsecure', 'bitdefender', 'cove', 'sentinelone', 'nodeware']):
             logger.debug("Credentials already in nested format")
             return credentials
 
@@ -224,7 +224,11 @@ class EncryptionManager:
         nested_credentials = {
             'ninjaone': {},
             'autotask': {},
-            'connectsecure': {}
+            'connectsecure': {},
+            'bitdefender': {},
+            'cove': {},
+            'sentinelone': {},
+            'nodeware': {}
         }
 
         # Map each credential to its platform
@@ -235,6 +239,14 @@ class EncryptionManager:
                 nested_credentials['autotask'][key] = value
             elif key.startswith('connectsecure_'):
                 nested_credentials['connectsecure'][key] = value
+            elif key.startswith('bitdefender_'):
+                nested_credentials['bitdefender'][key] = value
+            elif key.startswith('cove_'):
+                nested_credentials['cove'][key] = value
+            elif key.startswith('sentinelone_'):
+                nested_credentials['sentinelone'][key] = value
+            elif key.startswith('nodeware_'):
+                nested_credentials['nodeware'][key] = value
             else:
                 # Unknown credential, keep it at root level
                 logger.warning(f"Unknown credential key: {key}")
