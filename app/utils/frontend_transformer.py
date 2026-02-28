@@ -322,6 +322,26 @@ class FrontendTransformer:
                                 frontend_json["SentinelOne"] = {"charts": {}}
                             frontend_json["SentinelOne"]["charts"][chart_key] = s1_charts[chart_key]
 
+                # NodeWare charts (2 charts, 4 tables)
+                nodeware_metrics = full_data.get("nodeware_metrics", {})
+                if nodeware_metrics:
+                    nw_charts = nodeware_metrics.get("charts", {})
+                    nw_tables = nodeware_metrics.get("tables", {})
+
+                    nw_chart_keys = ["summary_metrics", "cvss_breakdown"]
+                    for chart_key in nw_chart_keys:
+                        if is_chart_selected('nodeware', chart_key) and chart_key in nw_charts:
+                            if "NodeWare" not in frontend_json:
+                                frontend_json["NodeWare"] = {"charts": {}, "tables": {}}
+                            frontend_json["NodeWare"]["charts"][chart_key] = nw_charts[chart_key]
+
+                    nw_table_keys = ["known_exploited_cves", "cvss_prioritized", "asset_risk_score", "epss_prioritized"]
+                    for table_key in nw_table_keys:
+                        if is_chart_selected('nodeware', table_key) and table_key in nw_tables:
+                            if "NodeWare" not in frontend_json:
+                                frontend_json["NodeWare"] = {"charts": {}, "tables": {}}
+                            frontend_json["NodeWare"]["tables"][table_key] = nw_tables[table_key]
+
             except Exception as e:
                 logger.warning(f"Failed to extract chart/table data: {e}")
                 # Fallback structure
@@ -425,6 +445,18 @@ class FrontendTransformer:
                         "analyst_verdicts_threats": {"false_positive": 0, "true_positive": 0, "suspicious": 0, "undefined": 0},
                         "threats_by_detection_engine": {},
                         "threats_by_type": {}
+                    }
+                }
+                frontend_json["NodeWare"] = {
+                    "charts": {
+                        "summary_metrics": {"average_score": 0, "assets": 0, "unique_cves": 0},
+                        "cvss_breakdown": {"critical": 0, "high": 0, "medium": 0, "low": 0, "unique_cves": 0}
+                    },
+                    "tables": {
+                        "known_exploited_cves": [],
+                        "cvss_prioritized": [],
+                        "asset_risk_score": [],
+                        "epss_prioritized": []
                     }
                 }
 
@@ -622,6 +654,24 @@ class FrontendTransformer:
                             s1["charts"][chart_key] = s1_charts[chart_key]
 
                     frontend_json["SentinelOne"] = s1
+
+            # --- NodeWare ---
+            elif platform_name == "NodeWare":
+                nodeware_metrics = full_data.get("nodeware_metrics", {})
+                if nodeware_metrics:
+                    nw = {"charts": {}, "tables": {}}
+                    nw_charts = nodeware_metrics.get("charts", {})
+                    nw_tables = nodeware_metrics.get("tables", {})
+
+                    for chart_key in ["summary_metrics", "cvss_breakdown"]:
+                        if is_chart_selected('nodeware', chart_key) and chart_key in nw_charts:
+                            nw["charts"][chart_key] = nw_charts[chart_key]
+
+                    for table_key in ["known_exploited_cves", "cvss_prioritized", "asset_risk_score", "epss_prioritized"]:
+                        if is_chart_selected('nodeware', table_key) and table_key in nw_tables:
+                            nw["tables"][table_key] = nw_tables[table_key]
+
+                    frontend_json["NodeWare"] = nw
 
             # --- Cove ---
             elif platform_name == "Cove":

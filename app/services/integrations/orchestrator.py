@@ -23,6 +23,7 @@ from app.processors.connectsecure_processor import ConnectSecureProcessor
 from app.processors.bitdefender_processor import BitdefenderProcessor
 from app.processors.cove_processor import CoveProcessor
 from app.processors.sentinelone_processor import SentinelOneProcessor
+from app.processors.nodeware_processor import NodewareProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class SecurityAssessmentOrchestrator:
         self.bitdefender_processor = None
         self.cove_processor = None
         self.sentinelone_processor = None
+        self.nodeware_processor = None
 
         logger.info(f"SecurityAssessmentOrchestrator initialized with account_id: {account_id}, org_id: {org_id}")
 
@@ -100,6 +102,7 @@ class SecurityAssessmentOrchestrator:
         bitdefender_company_id = org_data.get('bitdefender_company_id')
         cove_customer_id = org_data.get('cove_customer_id')
         sentinelone_site_id = org_data.get('sentinelone_site_id')
+        nodeware_customer_token = org_data.get('nodeware_customer_token')
 
         logger.info(f"Organization: {org_data.get('name', 'Unknown')} (ID: {self.org_id})")
         logger.info(f"  NinjaOne Org ID: {ninjaone_org_id}")
@@ -108,6 +111,7 @@ class SecurityAssessmentOrchestrator:
         logger.info(f"  Bitdefender Company ID: {bitdefender_company_id}")
         logger.info(f"  Cove Customer ID: {cove_customer_id}")
         logger.info(f"  SentinelOne Site ID: {sentinelone_site_id}")
+        logger.info(f"  NodeWare Customer Token: {nodeware_customer_token}")
 
         if ninjaone_org_id:
             self.ninjaone_processor = NinjaOneProcessor(
@@ -160,6 +164,15 @@ class SecurityAssessmentOrchestrator:
             logger.warning(f"No SentinelOne site_id found - SentinelOne data will be skipped")
             self.sentinelone_processor = None
 
+        if nodeware_customer_token:
+            self.nodeware_processor = NodewareProcessor(
+                account_id=self.account_id,
+                nodeware_customer_token=nodeware_customer_token
+            )
+        else:
+            logger.warning(f"No NodeWare customer_token found - NodeWare data will be skipped")
+            self.nodeware_processor = None
+
         return {
             'ninjaone_org_id': ninjaone_org_id,
             'autotask_company_id': autotask_company_id,
@@ -167,6 +180,7 @@ class SecurityAssessmentOrchestrator:
             'bitdefender_company_id': bitdefender_company_id,
             'cove_customer_id': cove_customer_id,
             'sentinelone_site_id': sentinelone_site_id,
+            'nodeware_customer_token': nodeware_customer_token,
             'organization_name': org_data.get('name', 'Unknown')
         }
 
@@ -399,15 +413,34 @@ class SecurityAssessmentOrchestrator:
                 logger.error(traceback.format_exc())
                 return None, e
 
+        async def fetch_nodeware():
+            if not self.nodeware_processor:
+                logger.info("Skipping NodeWare - not configured")
+                return None, None
+            logger.info("Fetching NodeWare data...")
+            try:
+                raw = await asyncio.to_thread(
+                    self.nodeware_processor.fetch_all_data,
+                    month_name
+                )
+                logger.info(f"NodeWare data fetched: {len(raw.get('assets', []))} assets for {raw.get('customer', {}).get('name', 'Unknown')}")
+                return raw, None
+            except Exception as e:
+                logger.error(f"Failed to fetch NodeWare data: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                return None, e
+
         logger.info("Starting PARALLEL data fetching from all platforms...")
 
-        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result, sentinelone_result = await asyncio.gather(
+        ninjaone_result, autotask_result, connectsecure_result, bitdefender_result, cove_result, sentinelone_result, nodeware_result = await asyncio.gather(
             fetch_ninjaone(),
             fetch_autotask(),
             fetch_connectsecure(),
             fetch_bitdefender(),
             fetch_cove(),
-            fetch_sentinelone()
+            fetch_sentinelone(),
+            fetch_nodeware()
         )
 
         logger.info("Processing fetched data...")
@@ -489,6 +522,18 @@ class SecurityAssessmentOrchestrator:
             logger.error(f"SentinelOne fetch failed: {sentinelone_error}")
             logger.info("Continuing with available data sources...")
 
+        nodeware_raw, nodeware_error = nodeware_result
+        if nodeware_raw and not nodeware_error:
+            logger.info("Processing NodeWare data...")
+            nodeware_processed = self.nodeware_processor.process_all_data(nodeware_raw)
+            final_data.update(nodeware_processed)
+            if "execution_info" in final_data:
+                final_data["execution_info"]["data_sources"].append("NodeWare")
+            logger.info("NodeWare data processed successfully")
+        elif nodeware_error:
+            logger.error(f"NodeWare fetch failed: {nodeware_error}")
+            logger.info("Continuing with available data sources...")
+
         return final_data
 
     async def stream_data_per_platform(self, company_id: Optional[int] = None, month_name: str = None):
@@ -510,7 +555,8 @@ class SecurityAssessmentOrchestrator:
         total_platforms = sum(1 for p in [
             self.ninjaone_processor, self.autotask_processor,
             self.connectsecure_processor, self.bitdefender_processor,
-            self.cove_processor, self.sentinelone_processor
+            self.cove_processor, self.sentinelone_processor,
+            self.nodeware_processor
         ] if p is not None)
 
         if total_platforms == 0:
@@ -582,6 +628,16 @@ class SecurityAssessmentOrchestrator:
             processed = self.sentinelone_processor.process_all_data(raw)
             return processed
 
+        async def fetch_and_process_nodeware():
+            if not self.nodeware_processor:
+                return None
+            raw = await asyncio.to_thread(
+                self.nodeware_processor.fetch_all_data,
+                month_name
+            )
+            processed = self.nodeware_processor.process_all_data(raw)
+            return processed
+
         # Create named tasks for all configured platforms
         tasks = {}
         if self.ninjaone_processor:
@@ -596,6 +652,8 @@ class SecurityAssessmentOrchestrator:
             tasks["Cove"] = asyncio.create_task(fetch_and_process_cove())
         if self.sentinelone_processor:
             tasks["SentinelOne"] = asyncio.create_task(fetch_and_process_sentinelone())
+        if self.nodeware_processor:
+            tasks["NodeWare"] = asyncio.create_task(fetch_and_process_nodeware())
 
         logger.info(f"Started {len(tasks)} platform tasks in parallel: {list(tasks.keys())}")
 

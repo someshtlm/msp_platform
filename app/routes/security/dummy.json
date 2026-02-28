@@ -1194,6 +1194,444 @@
                 }
               }
             },
+                     "NodeWare":    {
+    "charts": {
+      "summary_metrics": {
+        "average_score": 387,
+        "assets": 15,
+        "unique_cves": 513
+      },
+      "cvss_breakdown": {
+        "critical": 14,
+        "high": 287,
+        "medium": 200,
+        "low": 12,
+        "unique_cves": 513
+      }
+    },
+    "tables": {
+      "known_exploited_cves": [
+        {
+          "cve_id": "CVE-2026-2441",
+          "title": "Use after free vulnerability in the CSS in Google Chrome or Microsoft Edge via unspecified vectors",
+          "date_added": "2026-02-17",
+          "assets": 2
+        },
+        {
+          "cve_id": "CVE-2026-21533",
+          "title": "Windows Remote Desktop Services Elevation of Privilege Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 4
+        },
+        {
+          "cve_id": "CVE-2026-21525",
+          "title": "Windows Remote Access Connection Manager Denial of Service Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 4
+        },
+        {
+          "cve_id": "CVE-2026-21519",
+          "title": "Desktop Window Manager Elevation of Privilege Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 4
+        },
+        {
+          "cve_id": "CVE-2026-21513",
+          "title": "MSHTML Framework Security Feature Bypass Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 4
+        },
+        {
+          "cve_id": "CVE-2026-21510",
+          "title": "Windows Shell Security Feature Bypass Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 4
+        },
+        {
+          "cve_id": "CVE-2026-21514",
+          "title": "Microsoft Word Security Feature Bypass Vulnerability",
+          "date_added": "2026-02-10",
+          "assets": 1
+        }
+      ],
+      "cvss_prioritized": [
+        {
+          "cve": "CVE-2025-60724",
+          "title": "GDI+ Remote Code Execution Vulnerability",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2025-27918",
+          "title": "Heap-based buffer overflow vulnerability in AnyDesk",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2025-27832",
+          "title": "Buffer overflow vulnerability in Artifex Ghostscript",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2023-47359",
+          "title": "Out-of-bounds write vulnerability in VLC media player",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2025-27836",
+          "title": "Buffer overflow vulnerability in Artifex Ghostscript",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2025-27837",
+          "title": "Arbitrary file read vulnerability in Artifex Ghostscript",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2025-27831",
+          "title": "Buffer overflow vulnerability in Artifex Ghostscript",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2023-28879",
+          "title": "Buffer overflow vulnerability in Artifex Ghostscript",
+          "severity": "CRITICAL",
+          "cvss_score": 9.8,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2024-24691",
+          "title": "Improper input validation vulnerability in Zoom Client",
+          "severity": "CRITICAL",
+          "cvss_score": 9.6,
+          "assets": 2
+        },
+        {
+          "cve": "CVE-2025-49457",
+          "title": "Untrusted search path vulnerability in Zoom Client",
+          "severity": "CRITICAL",
+          "cvss_score": 9.6,
+          "assets": 2
+        },
+        {
+          "cve": "CVE-2023-39213",
+          "title": "Improper neutralization of special elements vulnerability in Zoom Client",
+          "severity": "CRITICAL",
+          "cvss_score": 9.6,
+          "assets": 2
+        },
+        {
+          "cve": "CVE-2023-39216",
+          "title": "Improper input validation vulnerability in Zoom Client",
+          "severity": "CRITICAL",
+          "cvss_score": 9.6,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2023-36534",
+          "title": "Path traversal vulnerability in Zoom Client",
+          "severity": "CRITICAL",
+          "cvss_score": 9.3,
+          "assets": 1
+        },
+        {
+          "cve": "CVE-2024-5535",
+          "title": "Multiple OpenSSL Vulnerabilities in Dell BIOS",
+          "severity": "CRITICAL",
+          "cvss_score": 9.1,
+          "assets": 2
+        },
+        {
+          "cve": "CVE-2025-62549",
+          "title": "Windows Routing and Remote Access Service (RRAS) Remote Code Execution Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 4
+        },
+        {
+          "cve": "CVE-2026-21510",
+          "title": "Windows Shell Security Feature Bypass Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 4
+        },
+        {
+          "cve": "CVE-2026-20868",
+          "title": "Windows Routing and Remote Access Service (RRAS) Remote Code Execution Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 4
+        },
+        {
+          "cve": "CVE-2026-21513",
+          "title": "MSHTML Framework Security Feature Bypass Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 4
+        },
+        {
+          "cve": "CVE-2025-64678",
+          "title": "Windows Routing and Remote Access Service (RRAS) Remote Code Execution Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 4
+        },
+        {
+          "cve": "CVE-2023-5217",
+          "title": "Heap buffer overflow vulnerability in vp8 encoding in libvpx in Google Chrome, Mozilla Firefox, Firefox ESR, Microsoft Edge or Microsoft Teams via unspecified vectors",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2023-4863",
+          "title": "Heap buffer overflow vulnerability in WebP in Google Chrome and Microsoft Edge via unspecified vectors",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2023-29330",
+          "title": "Microsoft Teams Remote Code Execution Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2023-29328",
+          "title": "Microsoft Teams Remote Code Execution Vulnerability",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2026-2447",
+          "title": "Heap buffer overflow vulnerability in libvpx in Mozilla Firefox and Mozilla Firefox ESR- MFSA2026-10",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 3
+        },
+        {
+          "cve": "CVE-2023-34116",
+          "title": "Improper input validation vulnerability in Zoom Client",
+          "severity": "HIGH",
+          "cvss_score": 8.8,
+          "assets": 2
+        }
+      ],
+      "asset_risk_score": [
+        {
+          "asset_name": "CSF-SHOP.CENTRAL.LOCAL",
+          "total": 178,
+          "critical": 2,
+          "high": 112,
+          "medium": 32,
+          "low": 32,
+          "score": 0
+        },
+        {
+          "asset_name": "sara2019",
+          "total": 193,
+          "critical": 3,
+          "high": 37,
+          "medium": 112,
+          "low": 41,
+          "score": 0
+        },
+        {
+          "asset_name": "OFFICE-DESKFEB2",
+          "total": 177,
+          "critical": 2,
+          "high": 110,
+          "medium": 31,
+          "low": 34,
+          "score": 0
+        },
+        {
+          "asset_name": "Sharon-march20.CENTRAL.LOCAL",
+          "total": 167,
+          "critical": 2,
+          "high": 106,
+          "medium": 31,
+          "low": 28,
+          "score": 0
+        },
+        {
+          "asset_name": "KenDesktop.CENTRAL.LOCAL",
+          "total": 184,
+          "critical": 2,
+          "high": 98,
+          "medium": 41,
+          "low": 43,
+          "score": 0
+        },
+        {
+          "asset_name": "Counter-march22",
+          "total": 172,
+          "critical": 1,
+          "high": 40,
+          "medium": 70,
+          "low": 61,
+          "score": 67
+        },
+        {
+          "asset_name": "Debbie_june22",
+          "total": 148,
+          "critical": 1,
+          "high": 79,
+          "medium": 32,
+          "low": 36,
+          "score": 132
+        },
+        {
+          "asset_name": "Kimw-pc.CENTRAL.LOCAL",
+          "total": 139,
+          "critical": 0,
+          "high": 26,
+          "medium": 64,
+          "low": 49,
+          "score": 239
+        },
+        {
+          "asset_name": "Stu-2022",
+          "total": 129,
+          "critical": 5,
+          "high": 24,
+          "medium": 66,
+          "low": 34,
+          "score": 317
+        },
+        {
+          "asset_name": "Ptildesktop.CENTRAL.LOCAL",
+          "total": 88,
+          "critical": 6,
+          "high": 30,
+          "medium": 18,
+          "low": 34,
+          "score": 544
+        },
+        {
+          "asset_name": "CSF-KWARPINSKI",
+          "total": 59,
+          "critical": 0,
+          "high": 20,
+          "medium": 5,
+          "low": 34,
+          "score": 806
+        },
+        {
+          "asset_name": "harry-2022",
+          "total": 67,
+          "critical": 0,
+          "high": 10,
+          "medium": 11,
+          "low": 46,
+          "score": 838
+        },
+        {
+          "asset_name": "counternew62020",
+          "total": 48,
+          "critical": 1,
+          "high": 4,
+          "medium": 1,
+          "low": 42,
+          "score": 950
+        },
+        {
+          "asset_name": "CSF-WWARPINSKI",
+          "total": 46,
+          "critical": 0,
+          "high": 1,
+          "medium": 5,
+          "low": 40,
+          "score": 956
+        },
+        {
+          "asset_name": "CSF-CONFROOM",
+          "total": 47,
+          "critical": 0,
+          "high": 1,
+          "medium": 5,
+          "low": 41,
+          "score": 956
+        }
+      ],
+      "epss_prioritized": [
+        {
+          "cve": "CVE-2023-4863",
+          "assets": 3,
+          "epss_score": 0.93606,
+          "epss_percentage": "94%"
+        },
+        {
+          "cve": "CVE-2017-0199",
+          "assets": 1,
+          "epss_score": 0.94327,
+          "epss_percentage": "94%"
+        },
+        {
+          "cve": "CVE-2017-8570",
+          "assets": 1,
+          "epss_score": 0.94247,
+          "epss_percentage": "94%"
+        },
+        {
+          "cve": "CVE-2023-2650",
+          "assets": 3,
+          "epss_score": 0.91857,
+          "epss_percentage": "92%"
+        },
+        {
+          "cve": "CVE-2015-1671",
+          "assets": 1,
+          "epss_score": 0.85928,
+          "epss_percentage": "86%"
+        },
+        {
+          "cve": "CVE-2013-3900",
+          "assets": 14,
+          "epss_score": 0.80494,
+          "epss_percentage": "80%"
+        },
+        {
+          "cve": "CVE-2024-21409",
+          "assets": 2,
+          "epss_score": 0.54695,
+          "epss_percentage": "55%"
+        },
+        {
+          "cve": "CVE-2016-7274",
+          "assets": 1,
+          "epss_score": 0.38401,
+          "epss_percentage": "38%"
+        },
+        {
+          "cve": "CVE-2023-28879",
+          "assets": 1,
+          "epss_score": 0.31221,
+          "epss_percentage": "31%"
+        },
+        {
+          "cve": "CVE-2023-43115",
+          "assets": 1,
+          "epss_score": 0.20058,
+          "epss_percentage": "20%"
+        }
+      ]
+    }
+  } ,
                     "execution_info": {
                         "generated_at": "2025-10-09T19:05:15.407535",
                         "data_sources_processed": [
