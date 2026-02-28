@@ -738,8 +738,7 @@
                                 "network_internet": 5,
                                 "printer_scanner": 3,
                                 "shared_drive": 25,
-                                "cybersecurity": 3,
-                                "other": 20
+                                "cybersecurity": 23
                             },
                             "open_ticket_priority_distribution": {
                                 "critical": 2,
